@@ -1,0 +1,15 @@
+import(rootSolve)
+import(memoise)
+import(survival)
+importFrom("stats", "rbinom", "rexp", "rnorm", "uniroot", "var")
+export(boundaries_sim)
+export(magnusson_turnbull)
+export(max_FI)
+export(sim_magnusson_turnbull)
+export(stage_1_evaluation)
+export(stage_1_selection)
+
+
+
+
+
