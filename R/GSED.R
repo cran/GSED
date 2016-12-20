@@ -655,12 +655,21 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
   for(j in 1:N_subsets){
     ind_group_j = which(biom_group==j)
     nb_event_j = sum(ind_event[ind_group_j])
-    temp = survdiff(Surv(time_min[ind_group_j], ind_event[ind_group_j]) ~ trt[ind_group_j])
-    temp2 = summary(survfit(Surv(time_min[ind_group_j], ind_event[ind_group_j]) ~ trt[ind_group_j]))
-    sgn = sign(temp2$table[,"median"][1]-temp2$table[,"median"][2])
-    Z_1j = sqrt(temp$chisq) * ifelse(sgn!=0, -sgn, -1)
-    I_1j[j] = nb_event_j/4
-    Y_1j[j] = Z_1j * sqrt(I_1j[j])
+    if(length(which(trt[ind_group_j]==0))>0 && length(which(trt[ind_group_j]==1))>0 && nb_event_j>0){
+      temp = survdiff(Surv(time_min[ind_group_j], ind_event[ind_group_j]) ~ trt[ind_group_j])
+      temp2 = summary(survfit(Surv(time_min[ind_group_j], ind_event[ind_group_j]) ~ trt[ind_group_j]))
+      sgn = sign(temp2$table[,"median"][1]-temp2$table[,"median"][2])
+      if(is.na(sgn)){
+        sgn = sign(temp2$table[,"*rmean"][1]-temp2$table[,"*rmean"][2])
+      }
+      Z_1j = sqrt(temp$chisq) * ifelse(sgn!=0, -sgn, -1)
+      I_1j[j] = nb_event_j/4
+      Y_1j[j] = Z_1j * sqrt(I_1j[j])
+    }
+    else{
+      Y_1j[j] = +Inf
+      I_1j[j] = 1
+    }
   }
   k=1
   selection = magnusson_turnbull(0, NA, N_subsets, f, Y_1j, I_1j, l, u, ratio_Delta_star_d1, ordering, increasing_theta)
@@ -675,12 +684,21 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
       ind_group_1S = c(ind_group_1S, which(biom_group==j))
     }
     nb_event_1S = sum(ind_event[ind_group_1S])
-    temp = survdiff(Surv(time_min[ind_group_1S], ind_event[ind_group_1S]) ~ trt[ind_group_1S])
-    temp2 = summary(survfit(Surv(time_min[ind_group_1S], ind_event[ind_group_1S]) ~ trt[ind_group_1S]))
-    sgn = sign(temp2$table[,"median"][1]-temp2$table[,"median"][2])
-    Zp_1S = sqrt(temp$chisq) * ifelse(sgn!=0, -sgn, -1)
-    I_1S = nb_event_1S/4
-    Y_1S = Zp_1S * sqrt(I_1S)
+    if(length(which(trt[ind_group_1S]==0))>0 && length(which(trt[ind_group_1S]==1))>0 && nb_event_1S>0){
+      temp = survdiff(Surv(time_min[ind_group_1S], ind_event[ind_group_1S]) ~ trt[ind_group_1S])
+      temp2 = summary(survfit(Surv(time_min[ind_group_1S], ind_event[ind_group_1S]) ~ trt[ind_group_1S]))
+      sgn = sign(temp2$table[,"median"][1]-temp2$table[,"median"][2])
+      if(is.na(sgn)){
+        sgn = sign(temp2$table[,"*rmean"][1]-temp2$table[,"*rmean"][2])
+      }
+      Zp_1S = sqrt(temp$chisq) * ifelse(sgn != 0, -sgn, -1)
+      I_1S = nb_event_1S/4
+      Y_1S = Zp_1S * sqrt(I_1S)
+    }
+    else{
+      Y_1S = -Inf
+      I_1S = 1
+    }
     step1 = magnusson_turnbull(1, keep, N_subsets, f, Y_1S, I_1S, l, u, ratio_Delta_star_d1, ordering, increasing_theta) 
     if(step1$Rejection == 1){
       reject = 1
@@ -711,6 +729,9 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
         temp = survdiff(Surv(time_min[ind_group_S], ind_event[ind_group_S]) ~ trt[ind_group_S])
         temp2 = summary(survfit(Surv(time_min[ind_group_S], ind_event[ind_group_S]) ~ trt[ind_group_S]))
         sgn = sign(temp2$table[,"median"][1]-temp2$table[,"median"][2])
+        if(is.na(sgn)){
+          sgn = sign(temp2$table[,"*rmean"][1]-temp2$table[,"*rmean"][2])
+        }
         Zp_kS = sqrt(temp$chisq) * ifelse(sgn!=0, -sgn, -1)
         I_kS = nb_event_kS/4
         Y_kS = Zp_kS * sqrt(I_kS)
@@ -820,7 +841,7 @@ test_BC = function(ind_trt_group_j, ind_con_group_j, outcome, type_outcome){
       }
     }
     else{
-      Z_1j = 0
+      Z_1j = NA
       I_1j = 1
     }
     return(c(Z_1j,I_1j))
@@ -857,6 +878,9 @@ sim_one_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n_ma
     t_stat = test_BC(ind_trt_group_j, ind_con_group_j, outcome, type_outcome)
     I_1j[j] = t_stat[2]
     Y_1j[j] = t_stat[1] * sqrt(I_1j[j])
+    if(is.na(Y_1j[j])){
+      Y_1j[j] = +Inf
+    }
   }
   k=1
   selection = magnusson_turnbull(0, NA, N_subsets, f, Y_1j, I_1j, l, u, ratio_Delta_star_d1, ordering, increasing_theta)
@@ -873,6 +897,9 @@ sim_one_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n_ma
     t_statS = test_BC(intersect(ind_group_1S,which(trt==1)), intersect(ind_group_1S,which(trt==0)), outcome, type_outcome)
     I_1S = t_statS[2]
     Y_1S = t_statS[1] * sqrt(I_1S)
+    if(is.na(Y_1S)){
+      Y_1S = -Inf
+    }
     step1 = magnusson_turnbull(1, keep, N_subsets, f, Y_1S, I_1S, l, u, ratio_Delta_star_d1, ordering, increasing_theta) 
     if(step1$Rejection == 1){
       reject = 1

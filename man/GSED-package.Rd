@@ -12,8 +12,8 @@ Provides function to apply "Group sequential enrichment design incorporating sub
 \tabular{ll}{
 Package: \tab GSED\cr
 Type: \tab Package\cr
-Version: \tab 1.0\cr
-Date: \tab 2016-10-05\cr
+Version: \tab 1.1\cr
+Date: \tab 2016-12-19\cr
 License: \tab GPL-3\cr
 }
 }
