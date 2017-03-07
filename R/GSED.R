@@ -444,7 +444,7 @@ sim_one_trial_max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, 
       f_S = sum(f_keep)
       part_Z_prev = sum( Z_1j[keep] * sqrt(f_keep) )
       for(k in 2:K_stages){
-        tZ = rnorm(1, ratio_Delta_star_d1[k-1] * sqrt(Imax/(1+sum(ratio_Delta_star_d1))) / f_S * sum(theta[keep]*f_keep), sqrt(ratio_Delta_star_d1[k-1]))
+        tZ = rnorm(1, ratio_Delta_star_d1[k-1] * sqrt(Imax/(1+sum(ratio_Delta_star_d1))) * sum(theta[keep]*f_keep), sqrt(ratio_Delta_star_d1[k-1]))
         eval_sk = subsequent_stages_sim(k, f, keep, tZ, u, l, part_Z_prev, ratio_Delta_star_d1)    
         if(eval_sk$stage==k){
           return(list(k,as.numeric(!is.null(eval_sk$S)),keep))
