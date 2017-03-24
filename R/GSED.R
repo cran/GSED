@@ -762,6 +762,8 @@ sim_trials_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, i
   list_keep = list()
   pct_keep = c()
   pct_rejec_keep = c()
+  pct_rejec_keep1 = c()
+  pct_rejec_keep2 = c()
   rejec_stage = numeric(K_stages)
   accep_stage = numeric(K_stages)
   mean_duration = 0
@@ -786,6 +788,12 @@ sim_trials_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, i
       pct_keep[inl[[2]]] = pct_keep[inl[[2]]]+1
       if(reject==1){
         pct_rejec_keep[inl[[2]]] = pct_rejec_keep[inl[[2]]]+1
+        if(st==1){
+          pct_rejec_keep1[inl[[2]]] = pct_rejec_keep1[inl[[2]]]+1
+        }
+        else if(st==2){
+          pct_rejec_keep2[inl[[2]]] = pct_rejec_keep2[inl[[2]]]+1
+        }
       }
     }
     else{
@@ -793,9 +801,25 @@ sim_trials_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, i
       pct_keep = c(pct_keep, 1)
       if(reject==1){
         pct_rejec_keep = c(pct_rejec_keep, 1)
+        if(st==1){
+          pct_rejec_keep1 = c(pct_rejec_keep1, 1)
+          pct_rejec_keep2 = c(pct_rejec_keep2, 0)
+        }
+        else if(st==2){
+          pct_rejec_keep1 = c(pct_rejec_keep1, 0)
+          pct_rejec_keep2 = c(pct_rejec_keep2, 1)
+        }
       }
       else{
         pct_rejec_keep = c(pct_rejec_keep, 0)
+        if(st==1){
+          pct_rejec_keep1 = c(pct_rejec_keep1, 0)
+          pct_rejec_keep2 = c(pct_rejec_keep2, 0)
+        }
+        else if(st==2){
+          pct_rejec_keep1 = c(pct_rejec_keep1, 0)
+          pct_rejec_keep2 = c(pct_rejec_keep2, 0)
+        }
       }
     }
     mean_duration = mean_duration + sMT$duration
@@ -805,14 +829,16 @@ sim_trials_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, i
   prob_accep = prob_accep/nsim
   pct_keep = pct_keep/nsim*100
   pct_rejec_keep = pct_rejec_keep/nsim*100
+  pct_rejec_keep1 = pct_rejec_keep1/nsim*100
+  pct_rejec_keep2 = pct_rejec_keep2/nsim*100
   rejec_stage = rejec_stage/nsim*100
   accep_stage = accep_stage/nsim*100
   mean_duration = mean_duration/nsim
   mean_pat = mean_pat/nsim
   
   return(list("prob_rejec"=prob_rejec, "prob_accep"=prob_accep, "list_keep"=list_keep, "pct_keep"=pct_keep,
-              "pct_rejec_keep"=pct_rejec_keep, "rejec_stage"=rejec_stage, "accep_stage"=accep_stage, 
-              "mean_duration"=mean_duration, "mean_pat"=mean_pat))
+              "pct_rejec_keep"=pct_rejec_keep, "pct_rejec_keep1"=pct_rejec_keep1, "pct_rejec_keep2"=pct_rejec_keep2,
+              "rejec_stage"=rejec_stage, "accep_stage"=accep_stage, "mean_duration"=mean_duration, "mean_pat"=mean_pat))
 }
 
 
@@ -963,6 +989,8 @@ sim_trials_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n
   list_keep = list()
   pct_keep = c()
   pct_rejec_keep = c()
+  pct_rejec_keep1 = c()
+  pct_rejec_keep2 = c()
   rejec_stage = numeric(K_stages)
   accep_stage = numeric(K_stages)
   mean_pat = 0
@@ -986,6 +1014,12 @@ sim_trials_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n
       pct_keep[inl[[2]]] = pct_keep[inl[[2]]]+1
       if(reject==1){
         pct_rejec_keep[inl[[2]]] = pct_rejec_keep[inl[[2]]]+1
+        if(st==1){
+          pct_rejec_keep1[inl[[2]]] = pct_rejec_keep1[inl[[2]]]+1
+        }
+        else if(st==2){
+          pct_rejec_keep2[inl[[2]]] = pct_rejec_keep2[inl[[2]]]+1
+        }
       }
     }
     else{
@@ -993,9 +1027,25 @@ sim_trials_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n
       pct_keep = c(pct_keep, 1)
       if(reject==1){
         pct_rejec_keep = c(pct_rejec_keep, 1)
+        if(st==1){
+          pct_rejec_keep1 = c(pct_rejec_keep1, 1)
+          pct_rejec_keep2 = c(pct_rejec_keep2, 0)
+        }
+        else if(st==2){
+          pct_rejec_keep1 = c(pct_rejec_keep1, 0)
+          pct_rejec_keep2 = c(pct_rejec_keep2, 1)
+        }
       }
       else{
         pct_rejec_keep = c(pct_rejec_keep, 0)
+        if(st==1){
+          pct_rejec_keep1 = c(pct_rejec_keep1, 0)
+          pct_rejec_keep2 = c(pct_rejec_keep2, 0)
+        }
+        else if(st==2){
+          pct_rejec_keep1 = c(pct_rejec_keep1, 0)
+          pct_rejec_keep2 = c(pct_rejec_keep2, 0)
+        }
       }
     }
     mean_pat = mean_pat + sMT$nb_patients
@@ -1003,14 +1053,16 @@ sim_trials_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n
   prob_rejec = prob_rejec/nsim
   prob_accep = prob_accep/nsim
   pct_keep = pct_keep/nsim*100
+  pct_rejec_keep1 = pct_rejec_keep1/nsim*100
+  pct_rejec_keep2 = pct_rejec_keep2/nsim*100
   pct_rejec_keep = pct_rejec_keep/nsim*100
   rejec_stage = rejec_stage/nsim*100
   accep_stage = accep_stage/nsim*100
   mean_pat = mean_pat/nsim
   
   return(list("prob_rejec"=prob_rejec, "prob_accep"=prob_accep, "list_keep"=list_keep, "pct_keep"=pct_keep,
-              "pct_rejec_keep"=pct_rejec_keep, "rejec_stage"=rejec_stage, "accep_stage"=accep_stage, 
-              "mean_pat"=mean_pat))
+              "pct_rejec_keep"=pct_rejec_keep, "pct_rejec_keep1"=pct_rejec_keep1, "pct_rejec_keep2"=pct_rejec_keep2,
+              "rejec_stage"=rejec_stage, "accep_stage"=accep_stage, "mean_pat"=mean_pat))
 }
 
 
