@@ -63,7 +63,7 @@ catch_entries_boundaries = function(K_stages, N_subsets, f, ratio_Delta_star_d1,
 }
 
 
-catch_entries_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, theta, pow, ordering, increasing_theta, seed, n_trials, rule){
+catch_entries_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, pow, ordering, increasing_theta, seed, n_trials, rule){
   catch = catch_entries_commun(K_stages, N_subsets, f, ratio_Delta_star_d1, ordering, increasing_theta, seed)
   K_stages = catch[[1]]
   N_subsets = catch[[2]]
@@ -79,9 +79,6 @@ catch_entries_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, t
     n_trials = as.integer(n_trials)
     print(paste("The number of simulated trials was transformed into integer: n_trials=", n_trials, sep=""))
   }
-  if(length(theta) != N_subsets){
-    stop(paste("Vector of parameters, theta, must be of length: ", N_subsets, sep=""))
-  }
   if(pow<0 || pow>1){
     stop("Power, pow, must be between 0 and 1")
   }
@@ -92,7 +89,10 @@ catch_entries_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, t
   if(rule != 1 && rule != 2){
     stop("Only rule number 1 or 2 are implemented")
   }
-  return(list(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, theta, pow, ordering, increasing_theta, seed, n_trials, rule))
+  if(type_outcome != "binary" && type_outcome != "continuous" && type_outcome != "survival"){
+    stop("Type of outcome not supported")
+  }
+  return(list(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, param_theta, pow, ordering, increasing_theta, seed, n_trials, rule, type_outcome))
 }
 
 
@@ -422,7 +422,18 @@ boundaries_sim = function(K_stages, N_subsets, f, ratio_Delta_star_d1, ordering,
 
 #########
 ### Simulation of one trial for maximum Fisher Information determination
-sim_one_trial_max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, theta, Imax, ordering, increasing_theta=FALSE){
+sim_one_trial_max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, Imax, ordering, increasing_theta=FALSE){
+  if(type_outcome == "binary"){
+    #p_mean = (param_theta[[1]][2,]+param_theta[[1]][1,])/2
+    theta = (param_theta[[1]][2,]-param_theta[[1]][1,]) #/ sqrt(p_mean*(1-p_mean))
+  }
+  else if(type_outcome == "continuous"){
+    theta = (param_theta[[1]][2,]-param_theta[[1]][1,]) #/ sqrt( (param_theta[[2]][2,]+param_theta[[2]][1,])/2 )
+  }
+  else if(type_outcome == "survival"){
+    theta = -log(param_theta)
+  }
+  
   ### STAGE 1
   Z_1j = rep(NA,N_subsets) 
   for(j in 1:N_subsets){
@@ -463,13 +474,13 @@ sim_one_trial_max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, 
 
 #########
 ### Simulations of n_trials for maximum Fisher Information determination
-sim_trials_max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, theta, Imax, ordering, increasing_theta=FALSE, seed=42, n_trials){
+sim_trials_max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, Imax, ordering, increasing_theta=FALSE, seed=42, n_trials){
   set.seed(seed)
   prop_eff_k = numeric(K_stages)
   prop_fut_k = numeric(K_stages)
   prop_eff_all_k = numeric(K_stages)
   for(i in 1:n_trials){
-    sim_i = sim_one_trial_max_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, theta, Imax, ordering, increasing_theta)     
+    sim_i = sim_one_trial_max_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, Imax, ordering, increasing_theta)     
     stage_i = sim_i[[1]]
     rule_stop_i = sim_i[[2]]
     keep = sim_i[[3]]
@@ -494,31 +505,32 @@ sim_trials_max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, 
 
 #########
 ### Maximum Fisher Information
-max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, theta, pow, ordering, increasing_theta=FALSE, seed=42, n_trials, rule){  
-  catch = catch_entries_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, theta, pow, ordering, increasing_theta, seed, n_trials, rule)
+max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, pow, ordering, increasing_theta=FALSE, seed=42, n_trials, rule){  
+  catch = catch_entries_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, pow, ordering, increasing_theta, seed, n_trials, rule)
   K_stages = catch[[1]]
   N_subsets = catch[[2]]
   f = catch[[3]]
   ratio_Delta_star_d1 = catch[[4]]
   l = catch[[5]]
   u = catch[[6]]
-  theta = catch[[7]]
+  param_theta = catch[[7]]
   pow = catch[[8]]
   ordering = catch[[9]]
   increasing_theta = catch[[10]]
   seed = catch[[11]]
   n_trials = catch[[12]]
   rule = catch[[13]]
+  type_outcome = catch[[14]]
   
   if(rule==1){
     fun_FI = function(x){
-      sim = sim_trials_max_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, theta, x, ordering, increasing_theta, seed, n_trials) 
+      sim = sim_trials_max_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, x, ordering, increasing_theta, seed, n_trials) 
       return(sum(sim[[3]])-pow)
     }
   }
   else if(rule==2){
     fun_FI = function(x){
-      sim = sim_trials_max_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, theta, x, ordering, increasing_theta, seed, n_trials) 
+      sim = sim_trials_max_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, x, ordering, increasing_theta, seed, n_trials) 
       return(sum(sim[[1]])-pow)
     }
   }
@@ -579,6 +591,8 @@ in_list = function(vec,liste){
 }
 
 
+
+
 #########
 ### Simulation of patients' inclusions for survival data
 incl_and_update_patients = function(incl_rate, duration, follow, time_event, trt, biom_group, lost_censor, time_cens, keep, f, cens_rate, param_cens, med_cur_c, HR){
@@ -636,8 +650,12 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
   time_min = c()
   lost_censor = c()
   time_cens = c()
+  
+  n_1 = nb_required / (1+sum(ratio_Delta_star_d1))
+  n_req_step = c(n_1, n_1*ratio_Delta_star_d1)
+  
   #Step 1
-  while(nb_events < nb_required/K_stages){
+  while(nb_events < n_req_step[1]){
     incl_up = incl_and_update_patients(incl_rate, duration, follow, time_event, trt, biom_group, lost_censor, time_cens, 1:N_subsets, f, cens_rate, param_cens, med_cur_c, HR)  
     follow = incl_up[[1]]
     duration = incl_up[[2]]
@@ -667,7 +685,7 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
       Y_1j[j] = Z_1j * sqrt(I_1j[j])
     }
     else{
-      Y_1j[j] = +Inf
+      Y_1j[j] = -Inf
       I_1j[j] = 1
     }
   }
@@ -708,7 +726,7 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
       f_keep = f[keep]
       f_S = sum(f_keep)
       while(k <= K_stages && is.na(reject)){ 
-        while(nb_events < nb_required*k/K_stages){
+        while(nb_events < cumsum(n_req_step)[k]){
           incl_up = incl_and_update_patients(incl_rate, duration, follow, time_event, trt, biom_group, lost_censor, time_cens, keep, f, cens_rate, param_cens, med_cur_c, HR)  
           follow = incl_up[[1]]
           duration = incl_up[[2]]
@@ -769,7 +787,9 @@ sim_trials_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, i
   mean_duration = 0
   mean_pat = 0
   for(isim in 1:nsim){
+if(isim %% 1000 == 0){
     print(isim)
+}
     sMT = sim_one_OS_MT(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl_rate, cens_rate, param_cens, 
                         med_cur_c, HR, nb_required, ordering, increasing_theta) 
     reject = sMT$reject
@@ -856,14 +876,14 @@ test_BC = function(ind_trt_group_j, ind_con_group_j, outcome, type_outcome){
         prop_commune = (mean1*n1+mean2*n2)/(n1+n2)
         var_pool = prop_commune*(1-prop_commune)
         Z_1j = (mean1-mean2) / sqrt( var_pool * (1/n1 + 1/n2) ) 
-        I_1j = (n1+n2) / (2*mean(c(outcome_trt1,outcome_trt2))*(1-mean(c(outcome_trt1,outcome_trt2))))
+        I_1j = (n1+n2) / (4*mean(c(outcome_trt1,outcome_trt2))*(1-mean(c(outcome_trt1,outcome_trt2))))
       }
       else if(type_outcome=="continuous"){ 
         var1 = var(outcome_trt1)
         var2 = var(outcome_trt2)
         var_pool = ( (n1-1)*var1+(n2-1)*var2 ) / (n1+n2-2)
         Z_1j = (mean1-mean2) / sqrt(var_pool*(1/n1+1/n2))
-        I_1j = (n1+n2) / (2*var_pool)
+        I_1j = (n1+n2) / 4
       }
     }
     else{
@@ -882,8 +902,11 @@ sim_one_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n_ma
   trt = c()
   biom_group = c()
   n_pat = 0
+  
+  n_1 = n_max / (1+sum(ratio_Delta_star_d1))
+  n_step = c(n_1, n_1*ratio_Delta_star_d1)
   #Step 1
-  while(n_pat < n_max/K_stages){
+  while(n_pat < n_step[1]){
     n_pat = n_pat+1
     biom_group_cur = sample(1:length(f), 1, prob=f)
     biom_group = c(biom_group, biom_group_cur)
@@ -935,7 +958,7 @@ sim_one_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n_ma
       f_keep = f[keep]
       f_S = sum(f_keep)
       while(k <= K_stages && is.na(reject)){ 
-        while(n_pat < n_max*k/K_stages){
+        while(n_pat < cumsum(n_step)[k]){
           n_pat = n_pat+1
           if(length(keep)>1){
             biom_group_cur = sample(keep, 1, prob=f_keep/f_S)
@@ -996,7 +1019,9 @@ sim_trials_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n
   mean_pat = 0
 
   for(isim in 1:nsim){
+if(isim %% 1000 == 0){
     print(isim)
+}
     sMT = sim_one_BC_MT(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n_max, type_outcome, param_outcome, ordering, increasing_theta)
     reject = sMT$reject
     st = sMT$stage

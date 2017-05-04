@@ -7,8 +7,8 @@
 - The second criterion consider the maxmimum Fisher information such that there is a pre-defined power to declare efficacy in at least one subgroup for a given vector of parameters representing treatment effetcs in each subgroup.
 }
 \usage{
-max_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, theta, pow, ordering, 
-increasing_theta=FALSE, seed=42, n_trials, rule)
+max_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, 
+pow, ordering, increasing_theta=FALSE, seed=42, n_trials, rule)
 }
 \arguments{ 
   \item{K_stages}{Integer indicating the number of stages in the design.}
@@ -17,7 +17,8 @@ increasing_theta=FALSE, seed=42, n_trials, rule)
   \item{ratio_Delta_star_d1}{Vector containing the ratio between the (observed Fisher) information increments at each stage >1 with the (observed Fisher) information at stage 1. Must be of length \code{K_stages}-1.}
   \item{l}{Vector containing the lower boundaries for stagewise decisions. Must be of length \code{K_stages}.}
   \item{u}{Vector containing the upper boundaries for stagewise decisions. Must be of length \code{K_stages}.}
-  \item{theta}{Vector of parameters representing treatment effects in each subgroup. Must satisfy the properties detailed in Magnusson and Turnbull's article (reparametrization can be needed).}
+  \item{type_outcome}{A string containing the type of outcome, either "survival", "binary", or "continuous".}
+  \item{param_theta}{Vector of parameters representing treatment effects in each subgroup. Must satisfy the properties detailed in Magnusson and Turnbull's article (reparametrization can be needed).}
   \item{pow}{Value representing the desired power.}
   \item{ordering}{Boolean indicating if the subgroups (theta) are ordered.}
   \item{increasing_theta}{Boolean indicating if greater values of theta parameters represent better treatment effects. The default value is set at FALSE.}
@@ -33,16 +34,18 @@ Baldur P. Magnusson and Bruce W. Turnbull. Group sequential enrichment design in
 }
 \author{Marie-Karelle Riviere-Jourdan \email{eldamjh@gmail.com}}
 \examples{
+theta_assumption = list(matrix(c(0.4,0.6,0.4,0.6,0.4,0.6),nrow=2,ncol=3))
+
 #For testing purpose only, larger number of simulations required (see in comments below)
 max_FI(K_stages=2, N_subsets=3, f=c(0.6,0.2,0.2), ratio_Delta_star_d1=c(1), l=c(0.7962, 2.5204), 
-u=c(2.7625, 2.5204), theta=c(0.2,0.2,0.2), pow=0.9, ordering=FALSE, increasing_theta=FALSE, 
-seed=140691, n_trials=3, rule=1)
+u=c(2.7625, 2.5204), type_outcome="binary", param_theta=theta_assumption, pow=0.9, 
+ordering=FALSE, increasing_theta=FALSE, seed=140691, n_trials=3, rule=1)
        
 #max_FI(K_stages=2, N_subsets=3, f=c(0.6,0.2,0.2), ratio_Delta_star_d1=c(1), l=c(0.7962, 2.5204), 
-#u=c(2.7625, 2.5204), theta=c(0.2,0.2,0.2), pow=0.9, ordering=FALSE, increasing_theta=FALSE, 
-#seed=140691, n_trials=10000000, rule=1)
+#u=c(2.7625, 2.5204), type_outcome="binary", param_theta=theta_assumption, pow=0.9, 
+#ordering=FALSE, increasing_theta=FALSE, seed=140691, n_trials=10000000, rule=1)
 
 #max_FI(K_stages=2, N_subsets=3, f=c(0.6,0.2,0.2), ratio_Delta_star_d1=c(1), l=c(0.7962, 2.5204), 
-#u=c(2.7625, 2.5204), theta=c(0,0.2,0), pow=0.9, ordering=FALSE, increasing_theta=FALSE, 
-#seed=140691, n_trials=10000000, rule=2)
+#u=c(2.7625, 2.5204), type_outcome="binary", param_theta=theta_assumption, pow=0.9,
+#ordering=FALSE, increasing_theta=FALSE, seed=140691, n_trials=10000000, rule=2)
 }

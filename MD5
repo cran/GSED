@@ -1,10 +1,10 @@
-8d5393e07dce039e987333708c1c72cd *DESCRIPTION
+3f32b45002a7be75e8a35e50f49552e8 *DESCRIPTION
 b24df215bc487f6f5c4be149be3a6df8 *NAMESPACE
-0e2df24e20dcc6ade2b52eb5552b94e0 *R/GSED.R
-2ac2944aaa283ab26427c694a5ac7442 *man/GSED-package.Rd
+db1e34b20345209f5a9b91a85b2721f8 *R/GSED.R
+41d12e9adae66c29966d90a5904e0c6f *man/GSED-package.Rd
 612251d7756e8ffe40a13cd2cb26c895 *man/boundaries_sim.Rd
 dc11d2062074bc5b97c0dc8aea0221dd *man/magnusson_turnbull.Rd
-9c490f6cb740b5b8eba0fe982241c1da *man/max_FI.Rd
+0646857a8e2e766d9159a1327530fa55 *man/max_FI.Rd
 96f5be9699314db321e03c86118475d6 *man/sim_magnusson_turnbull.Rd
 e547f770e1076739276fd17373868f8d *man/stage_1_evaluation.Rd
 27098c440e7e13567abac1f1c5682e8d *man/stage_1_selection.Rd
