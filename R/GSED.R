@@ -875,7 +875,7 @@ test_BC = function(ind_trt_group_j, ind_con_group_j, outcome, type_outcome){
       if(type_outcome=="binary"){
         prop_commune = (mean1*n1+mean2*n2)/(n1+n2)
         var_pool = prop_commune*(1-prop_commune)
-        Z_1j = (mean1-mean2) / sqrt( var_pool * (1/n1 + 1/n2) ) 
+        Z_1j = (mean1-mean2) / sqrt( var_pool * (1/n1 + 1/n2) )
         I_1j = (n1+n2) / (4*mean(c(outcome_trt1,outcome_trt2))*(1-mean(c(outcome_trt1,outcome_trt2))))
       }
       else if(type_outcome=="continuous"){ 
@@ -927,8 +927,9 @@ sim_one_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n_ma
     t_stat = test_BC(ind_trt_group_j, ind_con_group_j, outcome, type_outcome)
     I_1j[j] = t_stat[2]
     Y_1j[j] = t_stat[1] * sqrt(I_1j[j])
-    if(is.na(Y_1j[j])){
+    if(is.na(Y_1j[j]) || Y_1j[j]==+Inf){
       Y_1j[j] = +Inf
+      I_1j[j] = 1
     }
   }
   k=1
@@ -946,8 +947,9 @@ sim_one_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n_ma
     t_statS = test_BC(intersect(ind_group_1S,which(trt==1)), intersect(ind_group_1S,which(trt==0)), outcome, type_outcome)
     I_1S = t_statS[2]
     Y_1S = t_statS[1] * sqrt(I_1S)
-    if(is.na(Y_1S)){
+    if(is.na(Y_1S) || Y_1S==+Inf){
       Y_1S = -Inf
+      I_1S = 1
     }
     step1 = magnusson_turnbull(1, keep, N_subsets, f, Y_1S, I_1S, l, u, ratio_Delta_star_d1, ordering, increasing_theta) 
     if(step1$Rejection == 1){
