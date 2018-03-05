@@ -1,6 +1,7 @@
 import(rootSolve)
 import(memoise)
 import(survival)
+import(coin)
 importFrom("stats", "rbinom", "rexp", "rnorm", "uniroot", "var")
 export(boundaries_sim)
 export(magnusson_turnbull)

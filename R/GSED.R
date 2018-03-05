@@ -1,6 +1,7 @@
 library(rootSolve)
 library(memoise) 
 library(survival)
+library(coin)
 
 catch_entries_commun = function(K_stages, N_subsets, f, ratio_Delta_star_d1, ordering, increasing_theta, seed){
   if(as.integer(K_stages) != K_stages){
@@ -668,24 +669,20 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
     lost_censor = incl_up[[9]]
     time_cens = incl_up[[10]]
   }
+  nb_events_stage1 = nb_events
   Y_1j = numeric(N_subsets)
   I_1j = numeric(N_subsets)
   for(j in 1:N_subsets){
     ind_group_j = which(biom_group==j)
     nb_event_j = sum(ind_event[ind_group_j])
     if(length(which(trt[ind_group_j]==0))>0 && length(which(trt[ind_group_j]==1))>0 && nb_event_j>0){
-      temp = survdiff(Surv(time_min[ind_group_j], ind_event[ind_group_j]) ~ trt[ind_group_j])
-      temp2 = summary(survfit(Surv(time_min[ind_group_j], ind_event[ind_group_j]) ~ trt[ind_group_j]))
-      sgn = sign(temp2$table[,"median"][1]-temp2$table[,"median"][2])
-      if(is.na(sgn)){
-        sgn = sign(temp2$table[,"*rmean"][1]-temp2$table[,"*rmean"][2])
-      }
-      Z_1j = sqrt(temp$chisq) * ifelse(sgn!=0, -sgn, -1)
+      test = logrank_test(Surv(time_min[ind_group_j], ind_event[ind_group_j]) ~ as.factor(trt[ind_group_j]), distribution = "asymptotic")
+      Z_1j = test@statistic@teststatistic
       I_1j[j] = nb_event_j/4
       Y_1j[j] = Z_1j * sqrt(I_1j[j])
     }
     else{
-      Y_1j[j] = -Inf
+      Y_1j[j] = +Inf
       I_1j[j] = 1
     }
   }
@@ -702,14 +699,10 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
       ind_group_1S = c(ind_group_1S, which(biom_group==j))
     }
     nb_event_1S = sum(ind_event[ind_group_1S])
+    nb_events_stage1S = nb_event_1S
     if(length(which(trt[ind_group_1S]==0))>0 && length(which(trt[ind_group_1S]==1))>0 && nb_event_1S>0){
-      temp = survdiff(Surv(time_min[ind_group_1S], ind_event[ind_group_1S]) ~ trt[ind_group_1S])
-      temp2 = summary(survfit(Surv(time_min[ind_group_1S], ind_event[ind_group_1S]) ~ trt[ind_group_1S]))
-      sgn = sign(temp2$table[,"median"][1]-temp2$table[,"median"][2])
-      if(is.na(sgn)){
-        sgn = sign(temp2$table[,"*rmean"][1]-temp2$table[,"*rmean"][2])
-      }
-      Zp_1S = sqrt(temp$chisq) * ifelse(sgn != 0, -sgn, -1)
+      test = logrank_test(Surv(time_min[ind_group_1S], ind_event[ind_group_1S]) ~ as.factor(trt[ind_group_1S]), distribution = "asymptotic")
+      Zp_1S = test@statistic@teststatistic
       I_1S = nb_event_1S/4
       Y_1S = Zp_1S * sqrt(I_1S)
     }
@@ -725,8 +718,9 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
       k = 2
       f_keep = f[keep]
       f_S = sum(f_keep)
+      nb_event_kS = nb_events_stage1S
       while(k <= K_stages && is.na(reject)){ 
-        while(nb_events < cumsum(n_req_step)[k]){
+        while((nb_events_stage1-nb_events_stage1S)+nb_event_kS < cumsum(n_req_step)[k]){
           incl_up = incl_and_update_patients(incl_rate, duration, follow, time_event, trt, biom_group, lost_censor, time_cens, keep, f, cens_rate, param_cens, med_cur_c, HR)  
           follow = incl_up[[1]]
           duration = incl_up[[2]]
@@ -738,19 +732,14 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
           nb_events = incl_up[[8]]
           lost_censor = incl_up[[9]]
           time_cens = incl_up[[10]]
+          ind_group_S =c()
+          for(j in keep){
+            ind_group_S = c(ind_group_S, which(biom_group==j))
+          }
+          nb_event_kS = sum(ind_event[ind_group_S])
         }
-        ind_group_S =c()
-        for(j in keep){
-          ind_group_S = c(ind_group_S, which(biom_group==j))
-        }
-        nb_event_kS = sum(ind_event[ind_group_S])
-        temp = survdiff(Surv(time_min[ind_group_S], ind_event[ind_group_S]) ~ trt[ind_group_S])
-        temp2 = summary(survfit(Surv(time_min[ind_group_S], ind_event[ind_group_S]) ~ trt[ind_group_S]))
-        sgn = sign(temp2$table[,"median"][1]-temp2$table[,"median"][2])
-        if(is.na(sgn)){
-          sgn = sign(temp2$table[,"*rmean"][1]-temp2$table[,"*rmean"][2])
-        }
-        Zp_kS = sqrt(temp$chisq) * ifelse(sgn!=0, -sgn, -1)
+        test = logrank_test(Surv(time_min[ind_group_S], ind_event[ind_group_S]) ~ as.factor(trt[ind_group_S]), distribution = "asymptotic")
+        Zp_kS = test@statistic@teststatistic
         I_kS = nb_event_kS/4
         Y_kS = Zp_kS * sqrt(I_kS)
         stepk = magnusson_turnbull(k, keep, N_subsets, f, Y_kS, I_kS, l, u, ratio_Delta_star_d1, ordering, increasing_theta)
