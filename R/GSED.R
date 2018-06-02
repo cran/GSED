@@ -1,7 +1,6 @@
 library(rootSolve)
 library(memoise) 
 library(survival)
-library(coin)
 
 catch_entries_commun = function(K_stages, N_subsets, f, ratio_Delta_star_d1, ordering, increasing_theta, seed){
   if(as.integer(K_stages) != K_stages){
@@ -652,8 +651,9 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
   lost_censor = c()
   time_cens = c()
   
-  n_1 = nb_required / (1+sum(ratio_Delta_star_d1))
-  n_req_step = c(n_1, n_1*ratio_Delta_star_d1)
+  n_1 = round(nb_required / (1+sum(ratio_Delta_star_d1)))
+  #n_req_step = c(n_1, n_1*ratio_Delta_star_d1)
+  n_req_step = c(n_1, nb_required-n_1)
   
   #Step 1
   while(nb_events < n_req_step[1]){
@@ -676,8 +676,8 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
     ind_group_j = which(biom_group==j)
     nb_event_j = sum(ind_event[ind_group_j])
     if(length(which(trt[ind_group_j]==0))>0 && length(which(trt[ind_group_j]==1))>0 && nb_event_j>0){
-      test = logrank_test(Surv(time_min[ind_group_j], ind_event[ind_group_j]) ~ as.factor(trt[ind_group_j]), distribution = "asymptotic")
-      Z_1j = test@statistic@teststatistic
+      temp = survdiff(Surv(time_min[ind_group_j], ind_event[ind_group_j]) ~ trt[ind_group_j])
+      Z_1j = (temp$obs[1]-temp$exp[1])/sqrt(temp$var[1,1])
       I_1j[j] = nb_event_j/4
       Y_1j[j] = Z_1j * sqrt(I_1j[j])
     }
@@ -701,8 +701,8 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
     nb_event_1S = sum(ind_event[ind_group_1S])
     nb_events_stage1S = nb_event_1S
     if(length(which(trt[ind_group_1S]==0))>0 && length(which(trt[ind_group_1S]==1))>0 && nb_event_1S>0){
-      test = logrank_test(Surv(time_min[ind_group_1S], ind_event[ind_group_1S]) ~ as.factor(trt[ind_group_1S]), distribution = "asymptotic")
-      Zp_1S = test@statistic@teststatistic
+      temp = survdiff(Surv(time_min[ind_group_1S], ind_event[ind_group_1S]) ~ trt[ind_group_1S])
+      Zp_1S = (temp$obs[1]-temp$exp[1])/sqrt(temp$var[1,1])
       I_1S = nb_event_1S/4
       Y_1S = Zp_1S * sqrt(I_1S)
     }
@@ -738,8 +738,8 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
           }
           nb_event_kS = sum(ind_event[ind_group_S])
         }
-        test = logrank_test(Surv(time_min[ind_group_S], ind_event[ind_group_S]) ~ as.factor(trt[ind_group_S]), distribution = "asymptotic")
-        Zp_kS = test@statistic@teststatistic
+        temp = survdiff(Surv(time_min[ind_group_S], ind_event[ind_group_S]) ~ trt[ind_group_S])
+        Zp_kS = (temp$obs[1]-temp$exp[1])/sqrt(temp$var[1,1])
         I_kS = nb_event_kS/4
         Y_kS = Zp_kS * sqrt(I_kS)
         stepk = magnusson_turnbull(k, keep, N_subsets, f, Y_kS, I_kS, l, u, ratio_Delta_star_d1, ordering, increasing_theta)
@@ -892,8 +892,10 @@ sim_one_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n_ma
   biom_group = c()
   n_pat = 0
   
-  n_1 = n_max / (1+sum(ratio_Delta_star_d1))
-  n_step = c(n_1, n_1*ratio_Delta_star_d1)
+  n_1 = round(n_max / (1+sum(ratio_Delta_star_d1)))
+  #n_step = c(n_1, n_1*ratio_Delta_star_d1)
+  n_step = c(n_1, n_max-n_1)
+  
   #Step 1
   while(n_pat < n_step[1]){
     n_pat = n_pat+1
