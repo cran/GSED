@@ -7,7 +7,8 @@
 \usage{
 sim_magnusson_turnbull(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, type_outcome, 
 param_outcome=NA, n_max=NA, incl_rate=NA, cens_rate=NA, param_cens=NA, med_cur_c=NA, 
-HR=NA, nb_required=NA, ordering, increasing_theta=FALSE, nsim=1000, seed=42)
+HR=NA, nb_required=NA, nmax_wait=+Inf, ordering, increasing_theta=FALSE, 
+nsim=1000, seed=42)
 }
 \arguments{  
   \item{K_stages}{Integer indicating the number of stages in the design.}
@@ -25,6 +26,9 @@ HR=NA, nb_required=NA, ordering, increasing_theta=FALSE, nsim=1000, seed=42)
   \item{med_cur_c}{Number representing the median survival for the control group. Must be supplied only if \code{type_outcome} is equal to "survival", will be ignored otherwise.}
   \item{HR}{Vector containing the expected hazard ratios for each subgroup. Must be of length \code{N_subsets}. Must be supplied only if \code{type_outcome} is equal to "survival", will be ignored otherwise.}
   \item{nb_required}{Integer indicating the maximum number of events required. Must be supplied only if \code{type_outcome} is equal to "survival", will be ignored otherwise.}
+  \item{nmax_wait}{For \code{type_outcome} equal to "survival" only, will be ignored otherwise. If specified, maximum number of patients to include in the trial, the inclusions will be stopped when this
+  number is achieved and trial will pursue until the number of events required is achieved. Must be 
+  superior to \code{nb_required}. Default value is +Inf.}
   \item{ordering}{Boolean indicating if the subgroups (theta) are ordered.}
   \item{increasing_theta}{Boolean indicating if greater values of theta parameters represent better treatment effects. The default value is set at FALSE.}
   \item{nsim}{Integer indicating the number of trials to simulate. The default value is set at 1000.}
