@@ -598,8 +598,9 @@ in_list = function(vec,liste){
 
 #########
 ### Simulation of patients' inclusions for survival data
-incl_and_update_patients = function(incl_rate, duration, follow, time_event, trt, biom_group, lost_censor, time_cens, keep, f, 
-cens_rate, param_cens, med_cur_c, HR, time_event_study, nb_event_1ns, nb_required, nmax_wait, dur_incl){
+incl_and_update_patients = function(incl_rate, duration, follow, time_event, trt, biom_group, lost_censor, 
+                                    time_cens, keep, f, cens_rate, param_cens, med_cur_c, HR, time_event_study, nb_event_1ns, 
+                                    nb_required, nmax_wait, dur_incl){
   # Time until new inclusion
   if(length(incl_rate) == 1){
     new_incl = rexp(1,incl_rate)
@@ -652,11 +653,6 @@ cens_rate, param_cens, med_cur_c, HR, time_event_study, nb_event_1ns, nb_require
       follow = c(follow,0)
       time_event_study = c(time_event_study, duration+te)
     }
-    
-    follow = pmin(follow, time_cens)
-    ind_event = (time_event <= follow)
-    time_min = pmin(time_event, follow, na.rm=TRUE)
-    nb_events = sum(ind_event)
   }
   else{
     dur_incl = duration
@@ -673,12 +669,12 @@ cens_rate, param_cens, med_cur_c, HR, time_event_study, nb_event_1ns, nb_require
       diff_time = time_ev_req - duration+0.00001
       duration = duration + diff_time
       follow = follow + diff_time
-      follow = pmin(follow, time_cens)
-      ind_event = (time_event <= follow)
-      time_min = pmin(time_event, follow, na.rm=TRUE)
-      nb_events = sum(ind_event)
     }
   }
+  follow = pmin(follow, time_cens)
+  ind_event = (time_event <= follow)
+  time_min = pmin(time_event, follow, na.rm=TRUE)
+  nb_events = sum(ind_event)
   
   return(list(follow,duration,trt,biom_group,time_event,ind_event,time_min,nb_events,lost_censor,
               time_cens,time_event_study,dur_incl))
