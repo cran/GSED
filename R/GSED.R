@@ -622,7 +622,7 @@ incl_and_update_patients = function(incl_rate, duration, follow, time_event, trt
   # then we include a new patient
   if( nb_event_1ns+nb_events_S_temp < nb_required && 
      (length(trt) < nmax_wait ||
-      (length(trt) == nmax_wait && nb_event_1ns+length(trt[ind_group_S]) < nb_required))
+      (length(trt) >= nmax_wait && nb_event_1ns+length(trt[ind_group_S]) < nb_required))
      ){
     duration = duration + new_incl
     follow = follow+new_incl
@@ -655,11 +655,12 @@ incl_and_update_patients = function(incl_rate, duration, follow, time_event, trt
     }
   }
   else{
+    
     dur_incl = duration
     # Otherwise, if we achieved (or more) the number of events required OR
     # if the maximum number of patients is achieved and must wait (and enough patients for events)
     if( (nb_event_1ns+nb_events_S_temp >= nb_required) ||
-        (nb_event_1ns+nb_events_S_temp < nb_required && length(trt) == nmax_wait && 
+        (nb_event_1ns+nb_events_S_temp < nb_required && length(trt) >= nmax_wait && 
          nb_event_1ns+length(trt[ind_group_S]) >= nb_required)
       ){
       time_event_study_S = time_event_study[ind_group_S]
@@ -702,7 +703,7 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
   
   n_1 = ceiling(nb_required / (1+sum(ratio_Delta_star_d1)))
   n_req_step = c(n_1, nb_required-n_1)
-
+  
   #Step 1
   while(nb_events < n_req_step[1]){
     incl_up = incl_and_update_patients(incl_rate=incl_rate, duration=duration, follow=follow, time_event=time_event, 
