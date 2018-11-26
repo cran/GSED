@@ -6,9 +6,8 @@
 }
 \usage{
 sim_magnusson_turnbull(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, type_outcome, 
-param_outcome=NA, n_max=NA, incl_rate=NA, cens_rate=NA, param_cens=NA, med_cur_c=NA, 
-HR=NA, nb_required=NA, nmax_wait=+Inf, ordering, increasing_theta=FALSE, 
-nsim=1000, seed=42)
+param_outcome=NA, n_max=NA, incl_rate=NA, mean_cur_c=NA, HR=NA, nb_required=NA, 
+nmax_wait=+Inf, ordering, increasing_theta=FALSE, nsim=1000, seed=42)
 }
 \arguments{  
   \item{K_stages}{Integer indicating the number of stages in the design.}
@@ -21,9 +20,7 @@ nsim=1000, seed=42)
   \item{param_outcome}{Must be supplied only if \code{type_outcome} is equal to "binary" or "continuous". The parameters supplied for the binary outcome must be a list of one element containing a matrix of size 2x\code{N_subsets}. The parameters supplied for the continuous outcome must be a list of two elements containing two matrices of size 2x\code{N_subsets}. The matrices should contain probabilities of response, or the means and variances respectively, for in row control or treatment, and in column the subgroup number.}
   \item{n_max}{Integer representing the maximum number of patients to enroll in a trial. Must be supplied only if \code{type_outcome} is equal to "binary" or "continuous", will be ignored otherwise.}
   \item{incl_rate}{Number representing the inclusion rate. Must be supplied only if \code{type_outcome} is equal to "survival", will be ignored otherwise.}
-  \item{cens_rate}{Number representing the proportion of drop-outs. Must be supplied only if \code{type_outcome} is equal to "survival", will be ignored otherwise.}
-  \item{param_cens}{Number representing the median follow-up time for drop-outs. Must be supplied only if \code{type_outcome} is equal to "survival", will be ignored otherwise.}
-  \item{med_cur_c}{Number representing the median survival for the control group. Must be supplied only if \code{type_outcome} is equal to "survival", will be ignored otherwise.}
+  \item{mean_cur_c}{Number representing the median survival for the control group. Must be supplied only if \code{type_outcome} is equal to "survival", will be ignored otherwise.}
   \item{HR}{Vector containing the expected hazard ratios for each subgroup. Must be of length \code{N_subsets}. Must be supplied only if \code{type_outcome} is equal to "survival", will be ignored otherwise.}
   \item{nb_required}{Integer indicating the maximum number of events required. Must be supplied only if \code{type_outcome} is equal to "survival", will be ignored otherwise.}
   \item{nmax_wait}{For \code{type_outcome} equal to "survival" only, will be ignored otherwise. If specified, maximum number of patients to include in the trial, the inclusions will be stopped when this
@@ -68,6 +65,6 @@ ordering=FALSE, nsim=2, seed=42)
 
 #sim_magnusson_turnbull(K_stages=2, N_subsets=4, f=c(0.25,0.25,0.25,0.25), l=c(0.98,2.35), 
 #u=c(2.59,2.35), ratio_Delta_star_d1=c(1), type_outcome="survival", incl_rate=1/28, 
-#cens_rate=0, med_cur_c=7, HR=c(0.8,0.8,0.8,0.8), nb_required=1030, ordering=TRUE, 
+#mean_cur_c=7/log(2), HR=c(0.8,0.8,0.8,0.8), nb_required=1030, ordering=TRUE, 
 #increasing_theta=FALSE, nsim=1000, seed=42)
 }

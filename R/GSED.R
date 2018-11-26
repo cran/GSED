@@ -98,7 +98,7 @@ catch_entries_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, t
 
 
 catch_entries_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, type_outcome, param_outcome=NA,
-                         n_max=NA, incl_rate=NA, cens_rate=NA, param_cens=NA, med_cur_c=NA, HR=NA, 
+                         n_max=NA, incl_rate=NA, mean_cur_c=NA, HR=NA, 
                          nb_required=NA, nmax_wait=+Inf, ordering, increasing_theta=FALSE, nsim=1000, seed=42){
   catch = catch_entries_commun(K_stages, N_subsets, f, ratio_Delta_star_d1, ordering, increasing_theta, seed)
   K_stages = catch[[1]]
@@ -180,14 +180,8 @@ catch_entries_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, t
   if(type_outcome=="survival" && is.na(incl_rate)){
     stop("The inclusion rate, incl_rate, must be provided")
   }
-  if(type_outcome=="survival" && is.na(cens_rate)){
-    stop("The drop-out rate, cens_rate, must be provided")
-  }
-  if(type_outcome=="survival" && cens_rate > 0 && is.na(param_cens)){
-    stop("The median follow-up time for drop-out, param_cens, must be provided")
-  }
-  if(type_outcome=="survival" && is.na(med_cur_c)){
-    stop("The median survival for control group, med_cur_c, must be provided")
+  if(type_outcome=="survival" && is.na(mean_cur_c)){
+    stop("The median survival for control group, mean_cur_c, must be provided")
   }
   if(type_outcome=="survival" && anyNA(HR)){
     stop("The expected hazard ratios for each subgroup, HR, must be provided")
@@ -198,9 +192,6 @@ catch_entries_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, t
   if(type_outcome=="survival" && is.na(nmax_wait)== FALSE && (nmax_wait < nb_required)){
     stop("The maximum number of patients to include in the trial must be superior or equal to the number of events required")
   }
-  if(type_outcome=="survival" && (cens_rate < 0 || cens_rate > 1)){
-    stop("The drop-out rate, cens_rate, must be between 0 and 1")
-  }
   if(type_outcome=="survival" && length(HR) != N_subsets){
     stop(paste("The expected hazard ratios for each subgroup, HR, must be a vector of length: ", N_subsets, sep=""))
   }
@@ -209,7 +200,7 @@ catch_entries_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, t
     print(paste("The maximum number of events required was transformed into integer: nb_required=", nb_required, sep=""))
   }
   if((type_outcome=="binary" || type_outcome=="continuous") && 
-     (is.na(incl_rate)==FALSE || is.na(cens_rate)==FALSE || anyNA(param_cens)==FALSE || is.na(med_cur_c)==FALSE || 
+     (is.na(incl_rate)==FALSE || is.na(mean_cur_c)==FALSE || 
       anyNA(HR)==FALSE || is.na(nb_required)==FALSE)){
     print("Arguments required only for survival outcome are supplied and will be ignored")
   }
@@ -218,7 +209,7 @@ catch_entries_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, t
     print(paste("The number of simulations to perform was transformed into integer: nsim=", nsim, sep=""))
   }
   return(list(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, type_outcome, param_outcome, n_max, incl_rate, 
-              cens_rate, param_cens, med_cur_c, HR, nb_required, ordering, increasing_theta, nsim, seed, nmax_wait))
+              mean_cur_c, HR, nb_required, ordering, increasing_theta, nsim, seed, nmax_wait))
 }
 
 
@@ -594,144 +585,165 @@ in_list = function(vec,liste){
 }
 
 
-
-
-#########
-### Simulation of patients' inclusions for survival data
-incl_and_update_patients = function(incl_rate, duration, follow, time_event, trt, biom_group, lost_censor, 
-                                    time_cens, keep, f, cens_rate, param_cens, med_cur_c, HR, time_event_study, nb_event_1ns, 
-                                    nb_required, nmax_wait, dur_incl){
-  # Time until new inclusion
-  if(length(incl_rate) == 1){
-    new_incl = rexp(1,incl_rate)
-  }
-  else if(length(incl_rate) > 1){
-    new_incl = rexp(1,sum(incl_rate))
-  }
-  
-  follow_temp = follow+new_incl
-  follow_temp = pmin(follow_temp, time_cens)
-  ind_event_temp = (time_event <= follow_temp)
-  ind_group_S =c()
-  for(j in keep){
-    ind_group_S = c(ind_group_S, which(biom_group==j))
-  }
-  nb_events_S_temp = sum(ind_event_temp[ind_group_S])
-  # If number of events and number of patients not achieved OR
-  # if we achieved the maximum number of patients and not enough patients for events
-  # then we include a new patient
-  if( nb_event_1ns+nb_events_S_temp < nb_required && 
-     (length(trt) < nmax_wait ||
-      (length(trt) >= nmax_wait && nb_event_1ns+length(trt[ind_group_S]) < nb_required))
-     ){
-    duration = duration + new_incl
-    follow = follow+new_incl
-    
-    bg = sample(1:length(f), 1, prob=f)
-    # we include the patient only if he is in the subgroup retained
-    if(is.element(bg,keep)){
-      biom_group = c(biom_group, bg)
-      tc = rbinom(1,1,0.5) 
-      trt = c(trt, tc)
-      if(tc == 0){
-        te = rexp( 1, 1/med_cur_c )
-      }
-      else{
-        te = rexp( 1, 1/(med_cur_c/HR[bg]) ) 
-      }
-      censor = rbinom(1,1,cens_rate)
-      lost_censor = c(lost_censor, censor)
-      if(censor==1){
-        te = +Inf
-        tcens = rexp(1,1/param_cens)
-        time_cens = c(time_cens, tcens)
-      }
-      else{
-        time_cens = c(time_cens, +Inf)
-      }
-      time_event = c(time_event, te)
-      follow = c(follow,0)
-      time_event_study = c(time_event_study, duration+te)
+## Functions for sampling some random distributions by batches for
+## better performance
+rexp1 = function(p) {
+  b = rexp(100, p)
+  i = 0
+  return(function() {
+    if(i >= 100) {
+      b <<- rexp(100, p)
+      i <<- 0
     }
+    i <<- i + 1
+    return(b[i])
+  })
+}
+
+rbern1 = function(p) {
+  b = rbinom(100, 1, p)
+  i = 0
+  return(function() {
+    if(i >= 100) {
+      b <<- rbinom(100, 1, p)
+      i <<- 0
+    }
+    i <<- i + 1
+    return(b[i])
+  })
+}
+
+runif1 = function() {
+  b = runif(100, 0, 1)
+  i = 0
+  return(function() {
+    if(i >= 100) {
+      b <<- runif(100, 0, 1)
+      i <<- 0
+    }
+    i <<- i + 1
+    return(b[i])
+  })
+}
+
+sample1 = function(pop, prob) {
+  b = sample(pop, 100, TRUE, prob)
+  i = 0
+  return(function() {
+    if(i >= 100) {
+      b <<- sample(pop, 100, TRUE, prob)
+      i <<- 0
+    }
+    i <<- i + 1
+    return(b[i])
+  })
+}
+
+
+### Simulation of patients' inclusions for survival data until number of events required
+incl_until_ev = function(incl_rate, stage, nb_required, nmax_wait, data_1, f, keep, mean_cur_c, HR){
+  if(stage == 1){
+    data = list("nb_ev" = 0, "duration"=0, "dur_incl"=0, "t_incl"=c(), "t_event"=c(),
+                "trt"=c(), "biom_group"=c(), "n_pat"=0, "n_pat_keep"=0)
   }
   else{
-    
-    dur_incl = duration
-    # Otherwise, if we achieved (or more) the number of events required OR
-    # if the maximum number of patients is achieved and must wait (and enough patients for events)
-    if( (nb_event_1ns+nb_events_S_temp >= nb_required) ||
-        (nb_event_1ns+nb_events_S_temp < nb_required && length(trt) >= nmax_wait && 
-         nb_event_1ns+length(trt[ind_group_S]) >= nb_required)
-      ){
-      time_event_study_S = time_event_study[ind_group_S]
-      ord_ev = order(time_event_study_S)
-      ordered_time_event_study = time_event_study_S[ord_ev]
-      time_ev_req = ordered_time_event_study[nb_required-nb_event_1ns]
-      diff_time = time_ev_req - duration+0.00001
-      duration = duration + diff_time
-      follow = follow + diff_time
+    data = data_1
+  }
+  
+  file = data$t_event[data$t_event > data$duration]
+  n_pat_keep = data$n_pat_keep
+  rincl = rexp1(incl_rate)
+  rsurv = rexp1(1/mean_cur_c)
+  rtrt = rbern1(0.5)
+  rbg = sample1(keep, f)
+  runi = runif1()
+  next_incl = data$duration + rincl()
+  
+  while(data$nb_ev < nb_required){
+    next_ev = if(length(file) == 0) Inf else min(file)
+    if(data$n_pat < nmax_wait && next_incl < next_ev){
+      data$duration = next_incl
+      bg = rbg()
+      if(is.element(bg,keep)){
+        data$dur_incl = next_incl
+        data$n_pat = data$n_pat + 1
+        n_pat_keep = n_pat_keep + 1
+        data$t_incl[n_pat_keep] = next_incl
+        data$biom_group[n_pat_keep] = bg
+        data$trt[n_pat_keep] = rtrt()
+        if(data$trt[n_pat_keep] == 0){
+          data$t_event[n_pat_keep] = next_incl + rsurv()
+        }
+        else{
+          data$t_event[n_pat_keep] = next_incl + rsurv()/HR[bg]
+        }
+        file[length(file)+1] = data$t_event[n_pat_keep]
+      }
+      next_incl = next_incl + rincl()
+    }
+    else{
+      i = which.min(file)
+      data$duration = file[i]
+      file = file[-i]
+      data$nb_ev = data$nb_ev+1
     }
   }
-  follow = pmin(follow, time_cens)
-  ind_event = (time_event <= follow)
+  data$n_pat_keep = n_pat_keep
+  return(data)
+}
+
+
+### Calculation of survival quantities
+up_survival = function(data){
+  follow = data$duration - data$t_incl
+  time_event = data$t_event - data$t_incl
+  ind_event = as.numeric(time_event <= follow)
   time_min = pmin(time_event, follow, na.rm=TRUE)
-  nb_events = sum(ind_event)
-  
-  return(list(follow,duration,trt,biom_group,time_event,ind_event,time_min,nb_events,lost_censor,
-              time_cens,time_event_study,dur_incl))
+  return(list("time_min"=time_min, "ind_event"=ind_event))
+}
+
+
+remove_NS = function(data, keep, nb_ev_S){
+  data_next = list()
+  data_next$nb_ev = nb_ev_S
+  data_next$duration = data$duration
+  data_next$dur_incl = data$dur_incl
+  data_next$n_pat = data$n_pat
+  ind_keep = which(is.element(data$biom_group,keep))
+  data_next$n_pat_keep = length(ind_keep)
+  data_next$t_incl = data$t_incl[ind_keep]
+  data_next$t_event = data$t_event[ind_keep]
+  data_next$trt = data$trt[ind_keep]
+  data_next$biom_group = data$biom_group[ind_keep]
+  return(data_next)
 }
 
 
 
 #########
 ### Simulation of one design with Magnusson and Turnbull for survival data 
-sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl_rate, cens_rate, param_cens, 
-                         med_cur_c, HR, nb_required, nmax_wait=+Inf, ordering, increasing_theta=FALSE){
+sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl_rate, 
+                         mean_cur_c, HR, nb_required, nmax_wait=+Inf, ordering, increasing_theta=FALSE){
   reject = NA
-  nb_events = 0
-  duration = 0
-  follow = c()
-  time_event = c()
-  ind_event = c()
-  trt = c()
-  biom_group = c()
-  time_min = c()
-  lost_censor = c()
-  time_cens = c()
-  time_event_study = c()
-  dur_incl = NA
   
   n_1 = ceiling(nb_required / (1+sum(ratio_Delta_star_d1)))
   n_req_step = c(n_1, nb_required-n_1)
   
   #Step 1
-  while(nb_events < n_req_step[1]){
-    incl_up = incl_and_update_patients(incl_rate=incl_rate, duration=duration, follow=follow, time_event=time_event, 
-                                       trt=trt, biom_group=biom_group, lost_censor=lost_censor, time_cens=time_cens, 
-                                       keep=1:N_subsets, f=f, cens_rate=cens_rate, param_cens=param_cens, 
-                                       med_cur_c=med_cur_c, HR=HR, time_event_study=time_event_study, nb_event_1ns=0, 
-                                       nb_required=n_req_step[1], nmax_wait=nmax_wait, dur_incl=dur_incl)
-    follow = incl_up[[1]]
-    duration = incl_up[[2]]
-    trt = incl_up[[3]]
-    biom_group = incl_up[[4]]
-    time_event = incl_up[[5]]
-    ind_event = as.numeric(incl_up[[6]])
-    time_min = incl_up[[7]]
-    nb_events = incl_up[[8]]
-    lost_censor = incl_up[[9]]
-    time_cens = incl_up[[10]]
-    time_event_study = incl_up[[11]]
-    dur_incl = incl_up[[12]]
-  }
-  nb_events_stage1 = nb_events
+  data = incl_until_ev(incl_rate=incl_rate, stage=1, nb_required=n_req_step[1], nmax_wait=nmax_wait, data_1=NA, 
+                       f=f, keep=1:N_subsets, mean_cur_c=mean_cur_c, HR=HR)
+  data_k = data
+  update = up_survival(data)
+  time_min = update$time_min
+  ind_event = update$ind_event
+    
   Y_1j = numeric(N_subsets)
   I_1j = numeric(N_subsets)
   for(j in 1:N_subsets){
-    ind_group_j = which(biom_group==j)
+    ind_group_j = which(data$biom_group==j)
     nb_event_j = sum(ind_event[ind_group_j])
-    if(length(which(trt[ind_group_j]==0))>0 && length(which(trt[ind_group_j]==1))>0 && nb_event_j>0){
-      temp = survdiff(Surv(time_min[ind_group_j], ind_event[ind_group_j]) ~ trt[ind_group_j])
+    if(length(which(data$trt[ind_group_j]==0))>0 && length(which(data$trt[ind_group_j]==1))>0 && nb_event_j>0){
+      temp = survdiff(Surv(time_min[ind_group_j], ind_event[ind_group_j]) ~ data$trt[ind_group_j])
       Z_1j = (temp$obs[1]-temp$exp[1])/sqrt(temp$var[1,1])
       I_1j[j] = nb_event_j/4
       Y_1j[j] = Z_1j*sqrt(I_1j[j])
@@ -741,23 +753,22 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
       I_1j[j] = 1
     }
   }
+  
   k=1
   selection = magnusson_turnbull(0, NA, N_subsets, Y_1j, I_1j, l, u, ordering, increasing_theta)
   if(selection$Acceptation == 1){
     reject = 0
     keep = c()
-    dur_incl = duration
   }
   else{
     keep = selection$Keep
     ind_group_1S = c()
     for(j in keep){
-      ind_group_1S = c(ind_group_1S, which(biom_group==j))
+      ind_group_1S = c(ind_group_1S, which(data$biom_group==j))
     }
     nb_event_1S = sum(ind_event[ind_group_1S])
-    nb_events_1nS = nb_events_stage1 - nb_event_1S
-    if(length(which(trt[ind_group_1S]==0))>1 && length(which(trt[ind_group_1S]==1))>1 && nb_event_1S>0){
-      temp = survdiff(Surv(time_min[ind_group_1S], ind_event[ind_group_1S]) ~ trt[ind_group_1S])
+    if(length(which(data$trt[ind_group_1S]==0))>1 && length(which(data$trt[ind_group_1S]==1))>1 && nb_event_1S>0){
+      temp = survdiff(Surv(time_min[ind_group_1S], ind_event[ind_group_1S]) ~ data$trt[ind_group_1S])
       Zp_1S = (temp$obs[1]-temp$exp[1])/sqrt(temp$var[1,1])
       I_1S = nb_event_1S/4
       Y_1S = Zp_1S*sqrt(I_1S)
@@ -769,45 +780,23 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
     step1 = magnusson_turnbull(1, keep, N_subsets, Y_1S, I_1S, l, u, ordering, increasing_theta) 
     if(step1$Rejection == 1){
       reject = 1
-      dur_incl = duration
     }  
     else{  
+      npat_1S = length(which(is.element(data$biom_group,keep)==TRUE))
+      npat_1NS = length(which(is.element(data$biom_group,keep)==FALSE))
+      data = remove_NS(data, keep, nb_event_1S)
       k = 2
-      nb_event_kS = nb_event_1S
+      
       while(k <= K_stages && is.na(reject)){
-        while(nb_events_1nS+nb_event_kS < cumsum(n_req_step)[k]){
-          incl_up = incl_and_update_patients(incl_rate=incl_rate, duration=duration, follow=follow, 
-                                             time_event=time_event, trt=trt, biom_group=biom_group, 
-                                             lost_censor=lost_censor, time_cens=time_cens, keep=keep, f=f, 
-                                             cens_rate=cens_rate, param_cens=param_cens, med_cur_c=med_cur_c, 
-                                             HR=HR, time_event_study=time_event_study, nb_event_1ns=nb_events_1nS, 
-                                             nb_required=cumsum(n_req_step)[k], nmax_wait=nmax_wait, 
-                                             dur_incl=dur_incl)
-          follow = incl_up[[1]]
-          duration = incl_up[[2]]
-          trt = incl_up[[3]]
-          biom_group = incl_up[[4]]
-          time_event = incl_up[[5]]
-          ind_event = as.numeric(incl_up[[6]])
-          time_min = incl_up[[7]]
-          nb_events = incl_up[[8]]
-          lost_censor = incl_up[[9]]
-          time_cens = incl_up[[10]]
-	        time_event_study = incl_up[[11]]
-          dur_incl = incl_up[[12]]
-          ind_group_S =c()
-          for(j in keep){
-            ind_group_S = c(ind_group_S, which(biom_group==j))
-          }
-          nb_event_kS = sum(ind_event[ind_group_S])
-        }
-        ind_group_S =c()
-        for(j in keep){
-          ind_group_S = c(ind_group_S, which(biom_group==j))
-        }
-        nb_event_kS = sum(ind_event[ind_group_S])
-        if(length(which(trt[ind_group_S]==0))>1 && length(which(trt[ind_group_S]==1))>1 && nb_event_kS>0){
-          temp = survdiff(Surv(time_min[ind_group_S], ind_event[ind_group_S]) ~ trt[ind_group_S])
+        data_k = incl_until_ev(incl_rate=incl_rate, stage=k, nb_required=cumsum(n_req_step)[k], 
+                               nmax_wait=max(nmax_wait, npat_1NS+cumsum(n_req_step)[k]), data_1=data, 
+                               f=f, keep=keep, mean_cur_c=mean_cur_c, HR=HR)
+        update = up_survival(data_k)
+        time_min = update$time_min
+        ind_event = update$ind_event
+        nb_event_kS = sum(ind_event)
+        if(length(which(data_k$trt==0))>1 && length(which(data_k$trt==1))>1 && nb_event_kS>0){
+          temp = survdiff(Surv(time_min, ind_event) ~ data_k$trt)
           Zp_kS = (temp$obs[1]-temp$exp[1])/sqrt(temp$var[1,1])
           I_kS = nb_event_kS/4
           Y_kS = Zp_kS*sqrt(I_kS)
@@ -829,13 +818,14 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
       }
     }
   }
-  return(list("reject"=reject, "keep"=keep, "stage"=k, "duration"=duration, "nb_patients"=length(trt),"dur_incl"=dur_incl))
+  return(list("reject"=reject, "keep"=keep, "stage"=k, "duration"=data_k$duration, 
+              "nb_patients"=data_k$n_pat,"dur_incl"=data_k$dur_incl))
 }
 
 
 #########
 ### Simulation of n design with Magnusson and Turnbull for survival data
-sim_trials_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl_rate, cens_rate, param_cens, med_cur_c, 
+sim_trials_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl_rate, mean_cur_c, 
                             HR, nb_required, nmax_wait=+Inf, ordering, increasing_theta=FALSE, nsim=1000, seed=42){
   set.seed(seed) 
   prob_rejec = 0
@@ -861,10 +851,11 @@ sim_trials_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, i
 if(isim %% 1000 == 0){
 print(isim)
 }
-    sMT = sim_one_OS_MT(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl_rate, cens_rate, param_cens, 
-                        med_cur_c, HR, nb_required, nmax_wait, ordering, increasing_theta) 
+    sMT = sim_one_OS_MT(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl_rate,  
+                        mean_cur_c, HR, nb_required, nmax_wait, ordering, increasing_theta) 
     reject = sMT$reject
     st = sMT$stage
+
     if(reject == 1){
       prob_rejec = prob_rejec+1
       rejec_stage[st] = rejec_stage[st]+1
@@ -1192,10 +1183,10 @@ print(isim)
 #########
 ### General function to simulate n design with Magnusson and Turnbull for a given type of outcome
 sim_magnusson_turnbull = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, type_outcome, param_outcome=NA,
-                                  n_max=NA, incl_rate=NA, cens_rate=NA, param_cens=NA, med_cur_c=NA, HR=NA, 
+                                  n_max=NA, incl_rate=NA, mean_cur_c=NA, HR=NA, 
                                   nb_required=NA, nmax_wait=+Inf, ordering, increasing_theta=FALSE, nsim=1000, seed=42){
   catch = catch_entries_MT(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, type_outcome, param_outcome, n_max, incl_rate, 
-                        cens_rate, param_cens, med_cur_c, HR, nb_required, nmax_wait, ordering, increasing_theta, nsim, seed)
+                        mean_cur_c, HR, nb_required, nmax_wait, ordering, increasing_theta, nsim, seed)
   K_stages = catch[[1]]
   N_subsets = catch[[2]]
   f = catch[[3]]
@@ -1206,20 +1197,18 @@ sim_magnusson_turnbull = function(K_stages, N_subsets, f, l, u, ratio_Delta_star
   param_outcome = catch[[8]]
   n_max = catch[[9]]
   incl_rate = catch[[10]]
-  cens_rate = catch[[11]]
-  param_cens = catch[[12]]
-  med_cur_c = catch[[13]]
-  HR = catch[[14]]
-  nb_required = catch[[15]]
-  ordering = catch[[16]]
-  increasing_theta = catch[[17]]
-  nsim = catch[[18]]
-  seed = catch[[19]]
-  nmax_wait = catch[[20]]
+  mean_cur_c = catch[[11]]
+  HR = catch[[12]]
+  nb_required = catch[[13]]
+  ordering = catch[[14]]
+  increasing_theta = catch[[15]]
+  nsim = catch[[16]]
+  seed = catch[[17]]
+  nmax_wait = catch[[18]]
     
   if(type_outcome=="survival"){
-    return(sim_trials_OS_MT(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl_rate, cens_rate, param_cens, 
-                                med_cur_c, HR, nb_required, nmax_wait, ordering, increasing_theta, nsim, seed))  
+    return(sim_trials_OS_MT(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl_rate, mean_cur_c, HR, 
+                            nb_required, nmax_wait, ordering, increasing_theta, nsim, seed))  
   }
   else if(type_outcome=="binary" || type_outcome=="continuous"){
     return(sim_trials_BC_MT(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n_max, type_outcome, param_outcome, 
