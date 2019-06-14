@@ -627,16 +627,21 @@ runif1 = function() {
 }
 
 sample1 = function(pop, prob) {
-  b = sample(pop, 100, TRUE, prob)
-  i = 0
-  return(function() {
-    if(i >= 100) {
-      b <<- sample(pop, 100, TRUE, prob)
-      i <<- 0
-    }
-    i <<- i + 1
-    return(b[i])
-  })
+  if(length(pop)>1){
+    b = sample(pop, 100, TRUE, prob)
+    i = 0
+    return(function() {
+      if(i >= 100) {
+        b <<- sample(pop, 100, TRUE, prob)
+        i <<- 0
+      }
+      i <<- i + 1
+      return(b[i])
+    })
+  }
+  else{
+    return(function(){return(pop)})
+  }
 }
 
 
