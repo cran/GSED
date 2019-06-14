@@ -655,7 +655,7 @@ incl_until_ev = function(incl_rate, stage, nb_required, nmax_wait, data_1, f, ke
   rincl = rexp1(incl_rate)
   rsurv = rexp1(1/mean_cur_c)
   rtrt = rbern1(0.5)
-  rbg = sample1(keep, f)
+  rbg = sample1(keep, f[keep])
   runi = runif1()
   next_incl = data$duration + rincl()
   
