@@ -468,7 +468,8 @@ sim_one_trial_max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, 
 
 #########
 ### Simulations of n_trials for maximum Fisher Information determination
-sim_trials_max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, Imax, ordering, increasing_theta=FALSE, seed=42, n_trials){
+sim_trials_max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, Imax, ordering, 
+increasing_theta=FALSE, seed=42, n_trials){
   set.seed(seed)
   prop_eff_k = numeric(K_stages)
   prop_fut_k = numeric(K_stages)
@@ -499,7 +500,8 @@ sim_trials_max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, 
 
 #########
 ### Maximum Fisher Information
-max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, pow, ordering, increasing_theta=FALSE, seed=42, n_trials, rule){  
+max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, pow, ordering, 
+increasing_theta=FALSE, seed=42, n_trials, rule){  
   catch = catch_entries_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, pow, ordering, increasing_theta, seed, n_trials, rule)
   K_stages = catch[[1]]
   N_subsets = catch[[2]]
@@ -518,13 +520,15 @@ max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcom
   
   if(rule==1){
     fun_FI = function(x){
-      sim = sim_trials_max_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, x, ordering, increasing_theta, seed, n_trials) 
+      sim = sim_trials_max_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, x, ordering, 
+      increasing_theta, seed, n_trials) 
       return(sum(sim[[3]])-pow)
     }
   }
   else if(rule==2){
     fun_FI = function(x){
-      sim = sim_trials_max_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, x, ordering, increasing_theta, seed, n_trials) 
+      sim = sim_trials_max_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, x, ordering, 
+      increasing_theta, seed, n_trials) 
       return(sum(sim[[1]])-pow)
     }
   }
@@ -731,8 +735,9 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
                          mean_cur_c, HR, nb_required, nmax_wait=+Inf, ordering, increasing_theta=FALSE){
   reject = NA
   
-  n_1 = ceiling(nb_required / (1+sum(ratio_Delta_star_d1)))
-  n_req_step = c(n_1, nb_required-n_1)
+  n_1 = nb_required / (1+sum(ratio_Delta_star_d1))
+  n_req_step =  ceiling(c(n_1, n_1*ratio_Delta_star_d1))
+  n_req_step[K_stages] = n_req_step[K_stages] - (sum(n_req_step) - nb_required)
   
   #Step 1
   data = incl_until_ev(incl_rate=incl_rate, stage=1, nb_required=n_req_step[1], nmax_wait=nmax_wait, data_1=NA, 
@@ -838,8 +843,9 @@ sim_trials_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, i
   list_keep = list()
   pct_keep = c()
   pct_rejec_keep = c()
-  pct_rejec_keep1 = c()
-  pct_rejec_keep2 = c()
+
+  pct_rejec_keep_stages = matrix(0, ncol=0, nrow = K_stages)
+  rownames(pct_rejec_keep_stages) = paste0("stage", 1:K_stages)
   rejec_stage = numeric(K_stages)
   accep_stage = numeric(K_stages)
   mean_duration = 0
@@ -875,39 +881,21 @@ print(isim)
       pct_keep[inl[[2]]] = pct_keep[inl[[2]]]+1
       if(reject==1){
         pct_rejec_keep[inl[[2]]] = pct_rejec_keep[inl[[2]]]+1
-        if(st==1){
-          pct_rejec_keep1[inl[[2]]] = pct_rejec_keep1[inl[[2]]]+1
-        }
-        else if(st==2){
-          pct_rejec_keep2[inl[[2]]] = pct_rejec_keep2[inl[[2]]]+1
-        }
+        pct_rejec_keep_stages[st, inl[[2]]] = pct_rejec_keep_stages[st, inl[[2]]] + 1
       }
     }
     else{
       list_keep = c(list_keep, list(keep))
       pct_keep = c(pct_keep, 1)
+      new_column = rep(0, K_stages) # addings
       if(reject==1){
         pct_rejec_keep = c(pct_rejec_keep, 1)
-        if(st==1){
-          pct_rejec_keep1 = c(pct_rejec_keep1, 1)
-          pct_rejec_keep2 = c(pct_rejec_keep2, 0)
-        }
-        else if(st==2){
-          pct_rejec_keep1 = c(pct_rejec_keep1, 0)
-          pct_rejec_keep2 = c(pct_rejec_keep2, 1)
-        }
+        new_column[st] = 1
       }
       else{
         pct_rejec_keep = c(pct_rejec_keep, 0)
-        if(st==1){
-          pct_rejec_keep1 = c(pct_rejec_keep1, 0)
-          pct_rejec_keep2 = c(pct_rejec_keep2, 0)
-        }
-        else if(st==2){
-          pct_rejec_keep1 = c(pct_rejec_keep1, 0)
-          pct_rejec_keep2 = c(pct_rejec_keep2, 0)
-        }
       }
+      pct_rejec_keep_stages = cbind(pct_rejec_keep_stages, new_column)
     }
     mean_duration = mean_duration + sMT$duration
     mean_pat = mean_pat + sMT$nb_patients
@@ -922,8 +910,7 @@ print(isim)
   prob_accep = prob_accep/nsim
   pct_keep = pct_keep/nsim*100
   pct_rejec_keep = pct_rejec_keep/nsim*100
-  pct_rejec_keep1 = pct_rejec_keep1/nsim*100
-  pct_rejec_keep2 = pct_rejec_keep2/nsim*100
+  pct_rejec_keep_stages = pct_rejec_keep_stages/nsim*100
   rejec_stage = rejec_stage/nsim*100
   accep_stage = accep_stage/nsim*100
   mean_duration = mean_duration/nsim
@@ -934,7 +921,7 @@ print(isim)
   quant_dur_incl = quantile(dist_dur_incl, probs =c(0.5,0.75,1))
   
   return(list("prob_rejec"=prob_rejec, "prob_accep"=prob_accep, "list_keep"=list_keep, "pct_keep"=pct_keep,
-              "pct_rejec_keep"=pct_rejec_keep, "pct_rejec_keep1"=pct_rejec_keep1, "pct_rejec_keep2"=pct_rejec_keep2,
+              "pct_rejec_keep"=pct_rejec_keep, "pct_rejec_keep_stages"=pct_rejec_keep_stages,
               "rejec_stage"=rejec_stage, "accep_stage"=accep_stage, "mean_duration"=mean_duration, "mean_pat"=mean_pat,
               "mean_dur_incl"=mean_dur_incl, "dist_pat"=dist_pat, "dist_duration"=dist_duration, "dist_dur_incl"=dist_dur_incl,
               "quant_pat"=quant_pat, "quant_duration"=quant_duration, "quant_dur_incl"=quant_dur_incl))
@@ -988,9 +975,10 @@ sim_one_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n_ma
   biom_group = c()
   n_pat = 0
   
-  n_1 = ceiling(n_max / (1+sum(ratio_Delta_star_d1)))
-  #n_step = c(n_1, n_1*ratio_Delta_star_d1)
-  n_step = c(n_1, n_max-n_1)
+  n_1 = n_max / (1+sum(ratio_Delta_star_d1))
+  n_step =  ceiling(c(n_1, n_1*ratio_Delta_star_d1))
+  n_step[K_stages] = n_step[K_stages] - (sum(n_step) - n_max)
+
   
   #Step 1
   while(n_pat < n_step[1]){
@@ -1101,8 +1089,8 @@ sim_trials_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n
   list_keep = list()
   pct_keep = c()
   pct_rejec_keep = c()
-  pct_rejec_keep1 = c()
-  pct_rejec_keep2 = c()
+  pct_rejec_keep_stages = matrix(0, ncol=0, nrow = K_stages)
+  rownames(pct_rejec_keep_stages) = paste0("stage", 1:K_stages)
   rejec_stage = numeric(K_stages)
   accep_stage = numeric(K_stages)
   mean_pat = 0
@@ -1129,39 +1117,21 @@ print(isim)
       pct_keep[inl[[2]]] = pct_keep[inl[[2]]]+1
       if(reject==1){
         pct_rejec_keep[inl[[2]]] = pct_rejec_keep[inl[[2]]]+1
-        if(st==1){
-          pct_rejec_keep1[inl[[2]]] = pct_rejec_keep1[inl[[2]]]+1
-        }
-        else if(st==2){
-          pct_rejec_keep2[inl[[2]]] = pct_rejec_keep2[inl[[2]]]+1
-        }
+        pct_rejec_keep_stages[st, inl[[2]]] = pct_rejec_keep_stages[st, inl[[2]]] + 1
       }
     }
     else{
       list_keep = c(list_keep, list(keep))
       pct_keep = c(pct_keep, 1)
+      new_column = rep(0, K_stages)
       if(reject==1){
+        new_column[st] = 1
         pct_rejec_keep = c(pct_rejec_keep, 1)
-        if(st==1){
-          pct_rejec_keep1 = c(pct_rejec_keep1, 1)
-          pct_rejec_keep2 = c(pct_rejec_keep2, 0)
-        }
-        else if(st==2){
-          pct_rejec_keep1 = c(pct_rejec_keep1, 0)
-          pct_rejec_keep2 = c(pct_rejec_keep2, 1)
-        }
       }
       else{
         pct_rejec_keep = c(pct_rejec_keep, 0)
-        if(st==1){
-          pct_rejec_keep1 = c(pct_rejec_keep1, 0)
-          pct_rejec_keep2 = c(pct_rejec_keep2, 0)
-        }
-        else if(st==2){
-          pct_rejec_keep1 = c(pct_rejec_keep1, 0)
-          pct_rejec_keep2 = c(pct_rejec_keep2, 0)
-        }
       }
+      pct_rejec_keep_stages = cbind(pct_rejec_keep_stages, new_column) # addings
     }
     mean_pat = mean_pat + sMT$nb_patients
     dist_pat = c(dist_pat, sMT$nb_patients)
@@ -1169,15 +1139,14 @@ print(isim)
   prob_rejec = prob_rejec/nsim
   prob_accep = prob_accep/nsim
   pct_keep = pct_keep/nsim*100
-  pct_rejec_keep1 = pct_rejec_keep1/nsim*100
-  pct_rejec_keep2 = pct_rejec_keep2/nsim*100
   pct_rejec_keep = pct_rejec_keep/nsim*100
+  pct_rejec_keep_stages = pct_rejec_keep_stages/nsim*100
   rejec_stage = rejec_stage/nsim*100
   accep_stage = accep_stage/nsim*100
   mean_pat = mean_pat/nsim
   
   return(list("prob_rejec"=prob_rejec, "prob_accep"=prob_accep, "list_keep"=list_keep, "pct_keep"=pct_keep,
-              "pct_rejec_keep"=pct_rejec_keep, "pct_rejec_keep1"=pct_rejec_keep1, "pct_rejec_keep2"=pct_rejec_keep2,
+              "pct_rejec_keep"=pct_rejec_keep, "pct_rejec_keep_stages"=pct_rejec_keep_stages,
               "rejec_stage"=rejec_stage, "accep_stage"=accep_stage, "mean_pat"=mean_pat, "dist_pat"=dist_pat))
 }
 
