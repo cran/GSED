@@ -532,7 +532,7 @@ increasing_theta=FALSE, seed=42, n_trials, rule){
       return(sum(sim[[1]])-pow)
     }
   }
-  FI_max = uniroot(fun_FI, c(0,1e08))$root
+  FI_max = uniroot(fun_FI, c(0,1e04), extendInt="upX")$root
   return(FI_max) 
 }
 
