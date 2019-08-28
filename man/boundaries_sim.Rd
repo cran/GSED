@@ -7,7 +7,7 @@
 \usage{
 boundaries_sim(K_stages, N_subsets, f, ratio_Delta_star_d1, ordering, 
 increasing_theta=FALSE, seed=42, n_trials, alpha_spending, 
-one_minus_alpha_spending)
+one_minus_alpha_spending, updateProgress=NULL)
 }
 \arguments{                
   \item{K_stages}{Integer indicating the number of stages in the design.}
@@ -20,6 +20,7 @@ one_minus_alpha_spending)
   \item{n_trials}{Integer indicating the number of trials to simulate.}
   \item{alpha_spending}{Vector containing the values of the alpha-spending function at each time of the analysis (including 0 at time 0 and alpha at time 1). Must be of length \code{K_stages}+1.}
   \item{one_minus_alpha_spending}{Vector containing the values of the 1-alpha-spending function at each time of the analysis (including 0 at time 0 and 1-alpha at time 1). Must be of length \code{K_stages}+1.}
+  \item{updateProgress}{(for Rshiny application)}
 }
 \value{
 A list is returned, consisting of two vectors containing the lower and upper boundaries:

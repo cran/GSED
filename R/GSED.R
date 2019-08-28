@@ -1,6 +1,7 @@
 library(rootSolve)
 library(memoise) 
 library(survival)
+library(R.utils)
 
 catch_entries_commun = function(K_stages, N_subsets, f, ratio_Delta_star_d1, ordering, increasing_theta, seed){
   if(as.integer(K_stages) != K_stages){
@@ -98,8 +99,8 @@ catch_entries_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, t
 
 
 catch_entries_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, type_outcome, param_outcome=NA,
-                         n_max=NA, incl_rate=NA, mean_cur_c=NA, HR=NA, 
-                         nb_required=NA, nmax_wait=+Inf, ordering, increasing_theta=FALSE, nsim=1000, seed=42){
+                            n_max=NA, incl_rate=NA, mean_cur_c=NA, HR=NA, 
+                            nb_required=NA, nmax_wait=+Inf, ordering, increasing_theta=FALSE, nsim=1000, seed=42){
   catch = catch_entries_commun(K_stages, N_subsets, f, ratio_Delta_star_d1, ordering, increasing_theta, seed)
   K_stages = catch[[1]]
   N_subsets = catch[[2]]
@@ -374,7 +375,8 @@ sim_trials_boundaries = function(K_stages, N_subsets, f, ratio_Delta_star_d1, u,
 #########
 ### Determine stopping BOUNDARIES
 boundaries_sim = function(K_stages, N_subsets, f, ratio_Delta_star_d1, ordering, increasing_theta=FALSE, seed=42, n_trials,
-                          alpha_spending, one_minus_alpha_spending){
+                          alpha_spending, one_minus_alpha_spending, updateProgress=NULL){
+  if(is.function(updateProgress)) { updateProgress(message = "Catch entries") }
   catch = catch_entries_boundaries(K_stages, N_subsets, f, ratio_Delta_star_d1, ordering, increasing_theta, seed, n_trials, alpha_spending, one_minus_alpha_spending)
   K_stages = catch[[1]]
   N_subsets = catch[[2]]
@@ -393,12 +395,24 @@ boundaries_sim = function(K_stages, N_subsets, f, ratio_Delta_star_d1, ordering,
   for(k in 1:K_stages){
     fun_l = function(x) {
       sim = sim_trials_boundaries(k, N_subsets, f, ratio_Delta_star_d1, c(bound_U,+Inf), c(bound_L,x), ordering, increasing_theta, seed, n_trials)
+      if(is.function(updateProgress)) {
+        updateProgress(
+          message = paste("Stage",k,": Optimisation of l"), 
+          detail = paste(": candidate value =", round(x,3))
+        )
+      }
       return(sim[[2]][k] - diff_spend[[2]][k])
     }
     sol_l = uniroot(fun_l, c(-50,50))$root
     bound_L = c(bound_L,sol_l)
     fun_u = function(x) {
       sim = sim_trials_boundaries(k, N_subsets, f, ratio_Delta_star_d1, c(bound_U,x), c(bound_L), ordering, increasing_theta, seed, n_trials)
+      if(is.function(updateProgress)) {
+        updateProgress(
+          message = paste("Stage",k,": Optimisation of u"), 
+          detail = paste(": candidate value =", round(x,5))
+        )
+      }
       return(sim[[1]][k] - diff_spend[[1]][k])
       
     }
@@ -469,7 +483,7 @@ sim_one_trial_max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, 
 #########
 ### Simulations of n_trials for maximum Fisher Information determination
 sim_trials_max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, Imax, ordering, 
-increasing_theta=FALSE, seed=42, n_trials){
+                             increasing_theta=FALSE, seed=42, n_trials) {
   set.seed(seed)
   prop_eff_k = numeric(K_stages)
   prop_fut_k = numeric(K_stages)
@@ -501,7 +515,8 @@ increasing_theta=FALSE, seed=42, n_trials){
 #########
 ### Maximum Fisher Information
 max_FI = function(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, pow, ordering, 
-increasing_theta=FALSE, seed=42, n_trials, rule){  
+                  increasing_theta=FALSE, seed=42, n_trials, rule, updateProgress=NULL) {
+  if(is.function(updateProgress)) { updateProgress(detail = "Catch entries") }
   catch = catch_entries_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, pow, ordering, increasing_theta, seed, n_trials, rule)
   K_stages = catch[[1]]
   N_subsets = catch[[2]]
@@ -522,6 +537,7 @@ increasing_theta=FALSE, seed=42, n_trials, rule){
     fun_FI = function(x){
       sim = sim_trials_max_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, x, ordering, 
       increasing_theta, seed, n_trials) 
+      if(is.function(updateProgress)) { updateProgress(detail = paste("Evaluation with Imax = ",x)) }
       return(sum(sim[[3]])-pow)
     }
   }
@@ -529,9 +545,11 @@ increasing_theta=FALSE, seed=42, n_trials, rule){
     fun_FI = function(x){
       sim = sim_trials_max_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, x, ordering, 
       increasing_theta, seed, n_trials) 
+      if(is.function(updateProgress)) { updateProgress(detail = paste("Evaluation with Imax = ", round(x,5))) }
       return(sum(sim[[1]])-pow)
     }
   }
+  if(is.function(updateProgress)) { updateProgress(detail = "Optimisation of the criteria") }
   FI_max = uniroot(fun_FI, c(0,1e04), extendInt="upX")$root
   return(FI_max) 
 }
@@ -836,7 +854,8 @@ sim_one_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl
 #########
 ### Simulation of n design with Magnusson and Turnbull for survival data
 sim_trials_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl_rate, mean_cur_c, 
-                            HR, nb_required, nmax_wait=+Inf, ordering, increasing_theta=FALSE, nsim=1000, seed=42){
+                            HR, nb_required, nmax_wait=+Inf, ordering, increasing_theta=FALSE, nsim=1000, 
+			    seed=42, nsim_tot=NA, num_sc=NA, updateProgress=NULL){
   set.seed(seed) 
   prob_rejec = 0
   prob_accep = 0
@@ -859,9 +878,16 @@ sim_trials_OS_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, i
   quant_dur_incl = c()
   
   for(isim in 1:nsim){
-if(isim %% 1000 == 0){
-print(isim)
-}
+    if(isim %% 500 == 0){
+      if(is.function(updateProgress)) { updateProgress(detail = paste("Simulation ",isim)) }
+      else {
+        cat("Scenario", num_sc, ": loop", isim, "\n", file = "temp/simulations.txt", append = T)
+        nblines = R.utils::countLines("temp/simulations.txt")-1
+        cat("Percentage of simulations done : ", 100*(nblines*500)/nsim_tot, "% (", nblines*500,
+            " simulations out of ", nsim_tot, ")", sep = "", file = "temp/progress.txt")
+      }
+      print(paste("Simulation",isim))
+    }
     sMT = sim_one_OS_MT(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl_rate,  
                         mean_cur_c, HR, nb_required, nmax_wait, ordering, increasing_theta) 
     reject = sMT$reject
@@ -931,38 +957,38 @@ print(isim)
 #########
 ### Test for continuous or binary outcome 
 test_BC = function(ind_trt_group_j, ind_con_group_j, outcome, type_outcome){
-    n1 = length(ind_trt_group_j)
-    n2 = length(ind_con_group_j)
-    outcome_trt1 = outcome[ind_trt_group_j]
-    outcome_trt2 = outcome[ind_con_group_j]
-    mean1 = mean(outcome_trt1)
-    mean2 = mean(outcome_trt2)
-    if(n1 > 1 && n2 > 1){
-      if(type_outcome=="binary"){
-        if( mean1 == mean2 && (mean1 == 0 || mean1 == 1) ){
-          Z_1j = NA
-          I_1j = 1
-        }
-        else{
-          prop_commune = (mean1*n1+mean2*n2)/(n1+n2)
-          var_pool = prop_commune*(1-prop_commune)
-          Z_1j = (mean1-mean2) / sqrt( var_pool * (1/n1 + 1/n2) )
-          I_1j = (n1+n2) / (4*mean(c(outcome_trt1,outcome_trt2))*(1-mean(c(outcome_trt1,outcome_trt2))))
-        }
+  n1 = length(ind_trt_group_j)
+  n2 = length(ind_con_group_j)
+  outcome_trt1 = outcome[ind_trt_group_j]
+  outcome_trt2 = outcome[ind_con_group_j]
+  mean1 = mean(outcome_trt1)
+  mean2 = mean(outcome_trt2)
+  if(n1 > 1 && n2 > 1){
+    if(type_outcome=="binary"){
+      if( mean1 == mean2 && (mean1 == 0 || mean1 == 1) ){
+        Z_1j = NA
+        I_1j = 1
       }
-      else if(type_outcome=="continuous"){ 
-        var1 = var(outcome_trt1)
-        var2 = var(outcome_trt2)
-        var_pool = ( (n1-1)*var1+(n2-1)*var2 ) / (n1+n2-2)
-        Z_1j = (mean1-mean2) / sqrt(var_pool*(1/n1+1/n2))
-        I_1j = (n1+n2) / 4
+      else{
+        prop_commune = (mean1*n1+mean2*n2)/(n1+n2)
+        var_pool = prop_commune*(1-prop_commune)
+        Z_1j = (mean1-mean2) / sqrt( var_pool * (1/n1 + 1/n2) )
+        I_1j = (n1+n2) / (4*mean(c(outcome_trt1,outcome_trt2))*(1-mean(c(outcome_trt1,outcome_trt2))))
       }
     }
-    else{
-      Z_1j = NA
-      I_1j = 1
+    else if(type_outcome=="continuous"){ 
+      var1 = var(outcome_trt1)
+      var2 = var(outcome_trt2)
+      var_pool = ( (n1-1)*var1+(n2-1)*var2 ) / (n1+n2-2)
+      Z_1j = (mean1-mean2) / sqrt(var_pool*(1/n1+1/n2))
+      I_1j = (n1+n2) / 4
     }
-    return(c(Z_1j,I_1j))
+  }
+  else{
+    Z_1j = NA
+    I_1j = 1
+  }
+  return(c(Z_1j,I_1j))
 }
 
 
@@ -988,10 +1014,10 @@ sim_one_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n_ma
     trt_cur = rbinom(1,1,0.5)
     trt = c(trt, trt_cur)
     if(type_outcome=="binary"){
-        outcome = c(outcome, rbinom(1,1,param_outcome[[1]][trt_cur+1,biom_group_cur]))
+      outcome = c(outcome, rbinom(1,1,param_outcome[[1]][trt_cur+1,biom_group_cur]))
     }
     else if(type_outcome=="continuous"){
-        outcome = c(outcome, rnorm(1, param_outcome[[1]][trt_cur+1,biom_group_cur], sqrt(param_outcome[[2]][trt_cur+1,biom_group_cur])))
+      outcome = c(outcome, rnorm(1, param_outcome[[1]][trt_cur+1,biom_group_cur], sqrt(param_outcome[[2]][trt_cur+1,biom_group_cur])))
     } 
   }
   Y_1j = numeric(N_subsets)
@@ -1082,7 +1108,7 @@ sim_one_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n_ma
 #########
 ### Simulation of n design with Magnusson and Turnbull for binary or continuous data
 sim_trials_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n_max, type_outcome, param_outcome, ordering, 
-                            increasing_theta=FALSE, nsim=1000, seed=42){
+                            increasing_theta=FALSE, nsim=1000, seed=42, nsim_tot=NA, num_sc=NA, updateProgress=NULL){
   set.seed(seed) 
   prob_rejec = 0
   prob_accep = 0
@@ -1097,9 +1123,16 @@ sim_trials_BC_MT = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n
   dist_pat = c()
 
   for(isim in 1:nsim){
-if(isim %% 1000 == 0){
-print(isim)
-}
+    if(isim %% 1000 == 0){
+      if(is.function(updateProgress)) { updateProgress(detail = paste("Simulation ",isim)) }
+      else {
+        cat("Scenario", num_sc, ": loop", isim, "\n", file = "temp/simulations.txt", append = T)
+        nblines = R.utils::countLines("temp/simulations.txt") - 1
+        cat("Percentage of simulations done : ", 100*(nblines*1000)/nsim_tot, "% (", nblines*1000,
+            " simulations out of ", nsim_tot, ")", sep = "", file = "temp/progress.txt")
+      }
+      print(paste("Simulation",isim))
+    }
     sMT = sim_one_BC_MT(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n_max, type_outcome, param_outcome, ordering, increasing_theta)
     reject = sMT$reject
     st = sMT$stage
@@ -1158,9 +1191,11 @@ print(isim)
 ### General function to simulate n design with Magnusson and Turnbull for a given type of outcome
 sim_magnusson_turnbull = function(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, type_outcome, param_outcome=NA,
                                   n_max=NA, incl_rate=NA, mean_cur_c=NA, HR=NA, 
-                                  nb_required=NA, nmax_wait=+Inf, ordering, increasing_theta=FALSE, nsim=1000, seed=42){
+                                  nb_required=NA, nmax_wait=+Inf, ordering, increasing_theta=FALSE, nsim=1000, 
+				  seed=42, nsim_tot=NA, num_sc=1, updateProgress=NULL){
   catch = catch_entries_MT(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, type_outcome, param_outcome, n_max, incl_rate, 
                         mean_cur_c, HR, nb_required, nmax_wait, ordering, increasing_theta, nsim, seed)
+  if(is.function(updateProgress)) { updateProgress(detail = "Catch entries") }
   K_stages = catch[[1]]
   N_subsets = catch[[2]]
   f = catch[[3]]
@@ -1182,11 +1217,11 @@ sim_magnusson_turnbull = function(K_stages, N_subsets, f, l, u, ratio_Delta_star
     
   if(type_outcome=="survival"){
     return(sim_trials_OS_MT(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, incl_rate, mean_cur_c, HR, 
-                            nb_required, nmax_wait, ordering, increasing_theta, nsim, seed))  
+                            nb_required, nmax_wait, ordering, increasing_theta, nsim, seed, nsim_tot, num_sc, updateProgress))  
   }
   else if(type_outcome=="binary" || type_outcome=="continuous"){
     return(sim_trials_BC_MT(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, n_max, type_outcome, param_outcome, 
-                            ordering, increasing_theta, nsim, seed))
+                            ordering, increasing_theta, nsim, seed, nsim_tot, num_sc, updateProgress))
   }
 }
 

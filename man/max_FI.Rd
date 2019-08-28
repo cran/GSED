@@ -8,7 +8,7 @@
 }
 \usage{
 max_FI(K_stages, N_subsets, f, ratio_Delta_star_d1, l, u, type_outcome, param_theta, 
-pow, ordering, increasing_theta=FALSE, seed=42, n_trials, rule)
+pow, ordering, increasing_theta=FALSE, seed=42, n_trials, rule, updateProgress=NULL)
 }
 \arguments{ 
   \item{K_stages}{Integer indicating the number of stages in the design.}
@@ -25,6 +25,7 @@ pow, ordering, increasing_theta=FALSE, seed=42, n_trials, rule)
   \item{seed}{Interger representing the seed. The default value is set at 42.}
   \item{n_trials}{Integer indicating the number of trials to simulate.}
   \item{rule}{Integer with value either 1 or 2 for power criteria detailed in description section (1 for entire population, 2 for at least one subgroup).}
+  \item{updateProgress}{(for Rshiny application)}
 }
 \value{
 A value representing the maximum Fisher information is returned.

@@ -7,7 +7,8 @@
 \usage{
 sim_magnusson_turnbull(K_stages, N_subsets, f, l, u, ratio_Delta_star_d1, type_outcome, 
 param_outcome=NA, n_max=NA, incl_rate=NA, mean_cur_c=NA, HR=NA, nb_required=NA, 
-nmax_wait=+Inf, ordering, increasing_theta=FALSE, nsim=1000, seed=42)
+nmax_wait=+Inf, ordering, increasing_theta=FALSE, nsim=1000, seed=42,
+nsim_tot=NA, num_sc=1, updateProgress=NULL)
 }
 \arguments{  
   \item{K_stages}{Integer indicating the number of stages in the design.}
@@ -30,6 +31,9 @@ nmax_wait=+Inf, ordering, increasing_theta=FALSE, nsim=1000, seed=42)
   \item{increasing_theta}{Boolean indicating if greater values of theta parameters represent better treatment effects. The default value is set at FALSE.}
   \item{nsim}{Integer indicating the number of trials to simulate. The default value is set at 1000.}
   \item{seed}{Interger representing the seed. The default value is set at 42.}
+  \item{nsim_tot}{(for Rshiny application)}
+  \item{num_sc}{(for Rshiny application)}
+  \item{updateProgress}{(for Rshiny application)}
 }
 \value{
 A list is returned composed of: 

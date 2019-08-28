@@ -1,6 +1,7 @@
 import(rootSolve)
 import(memoise)
 import(survival)
+import(R.utils)
 importFrom("stats", "rbinom", "rexp", "rnorm", "runif", "uniroot", "var")
 importFrom("stats", "quantile")
 export(boundaries_sim)
@@ -9,6 +10,7 @@ export(max_FI)
 export(sim_magnusson_turnbull)
 export(stage_1_evaluation)
 export(stage_1_selection)
+export(test_BC)
 
 
 
